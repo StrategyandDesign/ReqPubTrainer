@@ -1,0 +1,10 @@
+# Paths other people implement against, or that decide who can execute what.
+# A change here needs a second reader.
+
+/docs/VERIFY.md        @owner
+/docs/SPEC.md          @owner
+/schemas/              @owner
+/supabase/migrations/  @owner
+/supabase/schema.sql   @owner
+/tools/                @owner
+/reqpub-keys.json      @owner

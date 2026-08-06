@@ -1,0 +1,58 @@
+<svg viewBox="0 0 940 620" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
+  <rect width="940" height="620" fill="#fafbfc"/>
+  <text x="470" y="44" text-anchor="middle" font-size="21" font-weight="680" fill="#0f1114" letter-spacing="-0.3">Your program platform reports progress; this record proves agreement.</text>
+
+  <!-- Layer 1: the tracker (theirs, gray, activity) -->
+  <rect x="70" y="76" width="800" height="128" rx="14" fill="#eef0f3" stroke="#d7dbe0" stroke-width="1.5"/>
+  <text x="94" y="106" font-size="10.5" font-weight="700" fill="#7a828c" letter-spacing="2.4">PROGRAM TRACKER · GOVERNS ACTIVITY</text>
+  <text x="94" y="132" font-size="14" fill="#4c545e">Status, milestones, RAG reviews, benefits tracking, dashboards, workflow approvals.</text>
+  <text x="94" y="156" font-size="14" fill="#4c545e">Its audit trail lives inside the platform: the tracker&#8217;s truth requires the tracker.</text>
+  <text x="94" y="186" font-size="12.5" font-style="italic" fill="#8a919b">A gate review on a dashboard is a meeting.</text>
+
+  <!-- Interfaces between the layers -->
+  <g stroke="#2563ff" stroke-width="2" fill="none">
+    <path d="M 250 336 L 250 216" marker-end="url(#arrB)"/>
+    <path d="M 640 336 L 640 258"/>
+    <path d="M 640 258 L 812 258" marker-end="url(#arrB)"/>
+  </g>
+  <defs>
+    <marker id="arrB" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 Z" fill="#2563ff"/></marker>
+  </defs>
+  <rect x="152" y="252" width="196" height="46" rx="9" fill="#ffffff" stroke="#2563ff" stroke-width="1.4"/>
+  <text x="250" y="271" text-anchor="middle" font-size="12" font-weight="650" fill="#2563ff">requirements.json</text>
+  <text x="250" y="288" text-anchor="middle" font-size="10.5" fill="#4c545e">the tracker&#8217;s plan imports from the record</text>
+  <rect x="544" y="236" width="192" height="46" rx="9" fill="#ffffff" stroke="#2563ff" stroke-width="1.4"/>
+  <text x="640" y="255" text-anchor="middle" font-size="12" font-weight="650" fill="#2563ff">gate packet</text>
+  <text x="640" y="272" text-anchor="middle" font-size="10.5" fill="#4c545e">the decision artifact, one click</text>
+  <text x="828" y="246" font-size="10.5" font-weight="700" fill="#7a828c" letter-spacing="1.6">STEERCO</text>
+
+  <!-- Layer 2: the record (ours, ink+blue, agreement) -->
+  <rect x="70" y="336" width="800" height="170" rx="14" fill="#0f1114"/>
+  <rect x="70" y="336" width="800" height="170" rx="14" fill="none" stroke="#2563ff" stroke-width="2"/>
+  <text x="94" y="368" font-size="10.5" font-weight="700" fill="#7ea4ff" letter-spacing="2.4">THE RECORD · GOVERNS AGREEMENT</text>
+  <text x="94" y="396" font-size="15" fill="#f4f6f8" font-weight="600">Immutable, fingerprinted baselines. Named sign-offs. Fit criteria and AI acceptance thresholds.</text>
+  <text x="94" y="420" font-size="14" fill="#c3c9d1">Gates decided on a fixed artifact, with the record&#8217;s state stored as evidence at the moment it was fixed.</text>
+  <text x="94" y="444" font-size="14" fill="#c3c9d1">Owns what &#8220;done&#8221; means: requirements, acceptance, agreement - the ground nobody else contests.</text>
+  <text x="94" y="482" font-size="12.5" font-style="italic" fill="#7ea4ff">A gate on an immutable, fingerprinted baseline is evidence.</text>
+
+  <!-- Verifies outside any vendor -->
+  <path d="M 470 506 L 470 534" stroke="#0f1114" stroke-width="2" marker-end="url(#arrK)"/>
+  <defs><marker id="arrK" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 Z" fill="#0f1114"/></marker></defs>
+  <text x="470" y="552" text-anchor="middle" font-size="12" font-weight="640" fill="#0f1114">SHA-256 + recipe on every export: the record verifies outside any vendor, including us.</text>
+
+  <!-- Four audiences -->
+  <g font-size="10.5">
+    <rect x="70" y="566" width="188" height="38" rx="9" fill="#ffffff" stroke="#d7dbe0"/>
+    <text x="164" y="581" text-anchor="middle" font-weight="700" fill="#0f1114">TECH TEAM</text>
+    <text x="164" y="596" text-anchor="middle" fill="#4c545e">the record feeds your tools</text>
+    <rect x="274" y="566" width="188" height="38" rx="9" fill="#ffffff" stroke="#d7dbe0"/>
+    <text x="368" y="581" text-anchor="middle" font-weight="700" fill="#0f1114">CONSULTANTS</text>
+    <text x="368" y="596" text-anchor="middle" fill="#4c545e">nothing to migrate; the record is yours</text>
+    <rect x="478" y="566" width="188" height="38" rx="9" fill="#ffffff" stroke="#d7dbe0"/>
+    <text x="572" y="581" text-anchor="middle" font-weight="700" fill="#0f1114">PROGRAM MANAGERS</text>
+    <text x="572" y="596" text-anchor="middle" fill="#4c545e">SteerCo prep is one click</text>
+    <rect x="682" y="566" width="188" height="38" rx="9" fill="#ffffff" stroke="#d7dbe0"/>
+    <text x="776" y="581" text-anchor="middle" font-weight="700" fill="#0f1114">CLIENTS</text>
+    <text x="776" y="596" text-anchor="middle" fill="#4c545e">what you signed verifies without any vendor</text>
+  </g>
+</svg>

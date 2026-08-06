@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!-- TEMPLATE - original draft for ReqPub. Have legal counsel confirm your obligations (e.g., CPRA "Do Not Sell or Share"). Not legal advice. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Privacy Choices · ReqPub</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='7' fill='%232563FF'/%3E%3Cpolyline points='14 11 19 16 14 21' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="site-head"><div class="wrap bar">
+  <a class="lockup" href="/"><svg class="mark" viewBox="0 0 40 40"><rect x="3.5" y="3.5" width="33" height="33" rx="9" fill="none" stroke-width="3"/><polyline points="17 13 24 20 17 27" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>ReqPub</a>
+  <nav class="links">
+    <a href="terms.html">Terms</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="cookies.html">Cookies</a>
+    <a class="btn btn-primary btn-sm" href="/app/">Open the app</a>
+  </nav>
+</div></header>
+
+<main class="legal"><div class="wrap" style="max-width:760px;padding-top:54px;padding-bottom:80px">
+  <p class="eyebrow">Legal</p>
+  <h1 style="font-size:38px;letter-spacing:-.025em;font-weight:680;margin:0 0 8px">Your Privacy Choices</h1>
+  <p class="updated" style="font-family:var(--mono);font-size:12.5px;color:var(--ink-4);margin:0 0 18px">Last updated June 30, 2026</p>
+  <p style="font-size:17px;color:var(--ink-3);margin:0 0 22px">ReqPub does not sell your personal information, and we do not share it for cross-context behavioral advertising. Depending on where you live, you may still record a preference to opt out of any “sale” or “sharing” as those terms are defined by applicable law.</p>
+
+  <div class="callout"><strong>Draft template.</strong> This control records your choice in your browser as a starting point. For a compliant program, have counsel confirm your obligations and wire this signal (and Global Privacy Control) into your actual data flows and any service providers.</div>
+
+  <div style="border:1px solid var(--line-2);border-radius:16px;padding:22px 22px;margin:22px 0;background:#fff;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px">
+      <div>
+        <div style="font-size:16px;font-weight:620;margin-bottom:4px">Do not sell or share my personal information</div>
+        <p style="margin:0;font-size:14px;color:var(--ink-3);line-height:1.55">Turn this on to record your opt-out preference on this device. We will also honor a recognized Global Privacy Control signal where required.</p>
+      </div>
+      <label class="rp-switch" style="margin-top:4px"><input type="checkbox" id="dns-toggle"><span class="track"></span><span class="knob"></span></label>
+    </div>
+    <div id="dns-status" style="margin-top:14px;font-size:13px;color:var(--ink-4);font-family:var(--mono)"></div>
+  </div>
+
+  <p style="font-size:15px;color:var(--ink-2)">To make a verifiable rights request (access, deletion, correction), or if you have questions, contact <span class="ph">[privacy@reqpub.example]</span>. See our <a href="privacy.html">Privacy Statement</a> for full details, including the rights available in your region.</p>
+</div></main>
+
+<div id="site-footer"></div>
+<script src="site.js"></script>
+<script>
+(function(){
+  var cb = document.getElementById('dns-toggle');
+  var st = document.getElementById('dns-status');
+  function paint(){
+    var on = window.reqpubDNS && window.reqpubDNS.get();
+    cb.checked = !!on;
+    st.textContent = on ? 'Opt-out recorded on this device.' : 'No opt-out recorded on this device.';
+  }
+  cb.addEventListener('change', function(){
+    if(window.reqpubDNS) window.reqpubDNS.set(cb.checked);
+    paint();
+  });
+  paint();
+})();
+</script>
+</body>
+</html>

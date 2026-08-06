@@ -1,0 +1,16 @@
+{
+  "keys": [
+    {
+      "kid": "acc-1",
+      "alg": "Ed25519",
+      "publicKeySpkiBase64": "MCowBQYDK2VwAyEAl7bOOlA4H0+2gZoTv63wyQ6ZeB6983mDHAOD54gNW40=",
+      "createdAt": "2026-08-03T14:16:35Z"
+    },
+    {
+      "kid": "whk-1",
+      "alg": "Ed25519",
+      "publicKeySpkiBase64": "MCowBQYDK2VwAyEAZmtPUQaj/0Qgu1b11D8YN5ZOv6ROOtNeOFkkKSXEias=",
+      "createdAt": "2026-08-03T14:16:35Z"
+    }
+  ]
+}

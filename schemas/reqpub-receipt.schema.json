@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reqpub.com/schemas/reqpub-receipt.schema.json",
+  "title": "ReqPub acceptance receipt",
+  "description": "The sealed record of one signature on one baseline. The seal is an Ed25519 signature over the SHA-256 of this object's canonical JSON per docs/VERIFY.md section 9; the .tsr files are RFC 3161 timestamps over that hash. No token and no email address appears; signer identity is name, role, and email domain. Additive-only within formatVersion 1.",
+  "type": "object",
+  "required": [
+    "format",
+    "formatVersion",
+    "receiptId",
+    "sealedAt",
+    "project",
+    "baseline",
+    "signature",
+    "chain",
+    "issuer"
+  ],
+  "properties": {
+    "format": {
+      "const": "reqpub-receipt"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "receiptId": {
+      "type": "string",
+      "description": "The receipt row's id."
+    },
+    "sealedAt": {
+      "type": "string",
+      "description": "ISO 8601 moment the seal was produced."
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "id",
+        "nameSha256"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "nameSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the project name at seal time; the name itself does not ride in the receipt."
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "required": [
+        "label",
+        "seq",
+        "docFingerprint",
+        "recomputedFingerprint"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "docFingerprint": {
+          "type": "string",
+          "description": "The fingerprint captured at send. Empty only on the named legacy path.",
+          "pattern": "^([0-9a-f]{64})?$"
+        },
+        "recomputedFingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Recomputed from the stored snapshot at seal time; divergence from a captured value aborts the seal."
+        },
+        "fingerprintNote": {
+          "type": "string",
+          "description": "Present only when the captured fingerprint was absent; names the legacy path."
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "required": [
+        "signRequestId",
+        "signedName",
+        "signerRole",
+        "signerEmailDomain",
+        "signedAt",
+        "channel"
+      ],
+      "properties": {
+        "signRequestId": {
+          "type": "string"
+        },
+        "signedName": {
+          "type": "string",
+          "description": "The name the signer typed."
+        },
+        "signerRole": {
+          "type": "string"
+        },
+        "signerEmailDomain": {
+          "type": "string",
+          "description": "Domain only, never an address."
+        },
+        "signedAt": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        }
+      }
+    },
+    "chain": {
+      "type": "object",
+      "required": [
+        "headSeq",
+        "headHash"
+      ],
+      "properties": {
+        "headSeq": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "The project chain head at seal time, or null with a reason."
+        },
+        "headHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Present only when the chain was unavailable at seal time."
+        }
+      }
+    },
+    "issuer": {
+      "type": "object",
+      "required": [
+        "name",
+        "kid"
+      ],
+      "properties": {
+        "name": {
+          "const": "ReqPub"
+        },
+        "kid": {
+          "type": "string",
+          "description": "The signing key id; its public key is published in reqpub-keys.json."
+        }
+      }
+    },
+    "practice": {
+      "const": true,
+      "description": "Present only on a practice record: a rehearsal, never evidence. Absent means evidence. Additive in formatVersion 1; every artifact produced before v2.55 is byte-unchanged."
+    }
+  }
+}

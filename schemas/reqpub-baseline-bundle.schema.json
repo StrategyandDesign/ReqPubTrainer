@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reqpub.com/schemas/reqpub-baseline-bundle.schema.json",
+  "title": "ReqPub baseline bundle",
+  "description": "One JSON file holding exactly what the fingerprint covers, {label, seq, snapshot}, plus the fingerprint the record captured. Verified by exact bytes and canonical JSON per docs/VERIFY.md sections 3 to 6. Additive-only within formatVersion 1; a breaking change increments formatVersion and both schemas stay published.",
+  "type": "object",
+  "required": [
+    "format",
+    "formatVersion",
+    "label",
+    "seq",
+    "snapshot",
+    "fingerprint"
+  ],
+  "properties": {
+    "format": {
+      "const": "reqpub-baseline-bundle"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "product": {
+      "type": "string",
+      "description": "Optional display name of the project at export time. Carries no verification meaning."
+    },
+    "label": {
+      "type": "string",
+      "description": "The version label as stored, e.g. 1.0. Covered by the fingerprint."
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The version sequence as stored. Covered by the fingerprint."
+    },
+    "snapshot": {
+      "type": "object",
+      "description": "The stored version snapshot, verbatim. Covered by the fingerprint."
+    },
+    "fingerprint": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value",
+        "recipe"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "SHA-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 over the canonical JSON of {label, seq, snapshot}, lowercase hex."
+        },
+        "recipe": {
+          "type": "string",
+          "description": "The recipe restated in words, so the file explains its own verification."
+        }
+      }
+    },
+    "note": {
+      "type": "string",
+      "description": "The not-a-signature statement. Informative only."
+    },
+    "practice": {
+      "const": true,
+      "description": "Present only on a practice record: a rehearsal, never evidence. Absent means evidence. Additive in formatVersion 1; every artifact produced before v2.55 is byte-unchanged."
+    }
+  }
+}

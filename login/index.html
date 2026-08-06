@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; frame-ancestors 'none'" />
+<title>Sign in · ReqPub</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='7' fill='%232563FF'/%3E%3Cpolyline points='14 11 19 16 14 21' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app/app.css">
+<script src="/app/js/theme-boot.js"></script>
+<style>
+  .auth-wrap{min-height:100vh;background:var(--bg-2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  .auth-card{width:100%;max-width:400px}
+  .auth-brand{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:18px}
+  .auth-brand .word{font-size:20px;font-weight:680;letter-spacing:-.02em;color:var(--ink)}
+  .auth-foot{margin-top:18px;text-align:center;font-size:12.5px;color:var(--ink-4)}
+  .auth-foot a{color:var(--ink-3)}
+  .field-label{font-size:12.5px;font-weight:560;color:var(--ink-2);margin:14px 0 6px;display:flex;justify-content:space-between;align-items:baseline}
+  .err{color:var(--bad);font-size:12.5px;margin-top:12px;line-height:1.5}
+  .ok{color:var(--good);font-size:12.5px;margin-top:12px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brandmark" style="width:30px;height:30px;border-radius:8px"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      <span class="word">ReqPub</span>
+    </div>
+    <div class="card" style="padding:28px">
+      <div id="paneSignin">
+        <h1 style="font-size:19px;font-weight:660;letter-spacing:-.02em;margin:0 0 4px">Sign in</h1>
+        <p style="font-size:13px;color:var(--ink-3);margin:0 0 10px;line-height:1.5">One sign-in for your team workspace and your partner portal.</p>
+        <form id="signinForm">
+          <div class="field-label">Email</div>
+          <input class="input" id="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+          <div class="field-label">Password <button type="button" id="forgotBtn" style="font-size:12px;color:var(--brand);font-weight:540">Forgot?</button></div>
+          <input class="input" id="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          <button class="btn btn-primary" id="signinBtn" type="submit" style="width:100%;height:46px;margin-top:16px">Sign in</button>
+        </form>
+        <div id="msg"></div>
+      </div>
+      <div id="paneReset" style="display:none">
+        <h1 style="font-size:19px;font-weight:660;letter-spacing:-.02em;margin:0 0 4px">Set a new password</h1>
+        <p style="font-size:13px;color:var(--ink-3);margin:0 0 10px;line-height:1.5">You followed a reset link - choose a new password.</p>
+        <div class="field-label">New password</div>
+        <input class="input" id="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters">
+        <button class="btn btn-primary" id="resetBtn" style="width:100%;height:46px;margin-top:16px">Save password</button>
+        <div id="msgReset"></div>
+      </div>
+    </div>
+    <div class="auth-foot">New here? <a href="/signup/">Create an account</a> · <a href="/">reqpub.com</a></div>
+    <div class="auth-foot" style="margin-top:10px;font-size:11.5px;line-height:1.7">
+      By signing in you agree to the <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.<br>
+      <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a> · <a href="/cookies.html">Cookies</a> · <a href="/acceptable-use.html">Acceptable use</a> · <a href="/do-not-share.html">Confidentiality</a><br>
+      <span style="color:var(--ink-4)">© 2026 ReqPub. All rights reserved.</span>
+    </div>
+  </div>
+</div>
+<script src="/config.js"></script>
+<!-- Vendored same-origin and pinned by hash. The content security policy above
+     permits no third-party script origin. Inventory: app/vendor/VENDOR.md -->
+<script src="../app/vendor/supabase-js-2.112.1.min.js" integrity="sha384-0x8XPoHt08aHZj+RHs8ojmhZ5IDsTLjPgblgWdriayWriqv9dic3Vkv1K2+UqgZV" crossorigin="anonymous"></script>
+<script src="/login/login.js"></script>
+</body>
+</html>

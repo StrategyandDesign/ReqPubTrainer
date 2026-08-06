@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReqPub · The accountability record for enterprise AI development</title>
+<meta name="description" content="The measurable definition of done, signed before the work starts. Named approvals, exact diffs, and one fingerprint that verifies without us." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='7' fill='%232563FF'/%3E%3Cpolyline points='14 11 19 16 14 21' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<meta property="og:title" content="ReqPub · The accountability record for enterprise AI development" />
+<meta property="og:description" content="One immutable, fingerprinted record from discovery to approved baseline. Exports that prove what was agreed." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0a0a; --ink-2:#1e1e1e; --ink-3:#334155; --ink-4:#475569;
+    --line:#e5e7eb; --line-2:#d1d5db; --bg:#ffffff; --bg-2:#fafafb; --bg-3:#f5f6f8;
+    --brand:#2563FF; --brand-600:#1d4ed8; --brand-700:#1e40af; --sky:#e6f0ff; --sky-2:#dbe7ff;
+    --good:#0f7a4f; --good-bg:#e7f6ee; --amber:#a35b09; --amber-bg:#fdf3e5;
+    --purple:#7c3aed; --teal:#0891b2;
+    /* The measure. This page carries its own stylesheet and does not load
+       site.css, so the tokens live here too. A body line is comfortable
+       between 45 and 75 characters; these paragraphs were running 134. */
+    --measure:66ch; --measure-wide:72ch;
+    --radius:14px; --radius-sm:10px; --radius-lg:22px;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 18px 44px rgba(15,23,42,.06);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  a{color:inherit;text-decoration:none}
+  h1,h2,h3{letter-spacing:-.025em;margin:0}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brand);font-weight:600}
+
+  .mark{width:30px;height:30px;flex:0 0 auto}
+  .mark rect,.mark polyline{stroke:var(--ink)}
+  .lockup{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:20px;letter-spacing:-.035em}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 22px;border-radius:12px;font-weight:600;font-size:15px;letter-spacing:-.01em;transition:transform .15s var(--ease),background .15s var(--ease),box-shadow .15s var(--ease),border-color .15s var(--ease);cursor:pointer;border:1px solid transparent;white-space:nowrap}
+  .btn svg{width:17px;height:17px}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-primary:hover{background:var(--brand-600);transform:translateY(-1px);box-shadow:0 10px 24px rgba(37,99,255,.32)}
+  .btn-secondary{background:#fff;color:var(--brand);border-color:var(--line-2)}
+  .btn-secondary:hover{border-color:var(--brand);background:var(--sky)}
+  .btn-sm{height:40px;padding:0 16px;font-size:14px}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:saturate(160%) blur(12px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .nav-links{display:flex;align-items:center;gap:30px}
+  .nav-links a{font-size:14.5px;color:var(--ink-3);font-weight:500;transition:color .15s}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-cta{display:flex;align-items:center;gap:14px}
+  @media(max-width:820px){.nav-links{display:none}}
+
+  .hero{padding:88px 0 60px;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(900px 420px at 80% -8%,var(--sky) 0%,rgba(230,240,255,0) 62%);pointer-events:none}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1.05fr);gap:54px;align-items:center;position:relative}
+  .hero h1{font-size:56px;line-height:1.04;font-weight:680}
+  .hero .hero-sub{font-size:22px;line-height:1.32;color:var(--ink-2);font-weight:600;margin:20px 0 30px;max-width:540px;letter-spacing:-.012em}
+  /* What the record contains: the components stated as a specification, above
+     the three things you do with them. Five columns on desktop, two on tablet,
+     one on phone, so no phrase ever wraps to a single orphaned word. */
+  .spec{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);margin:0 0 34px}
+  .spec-i{padding:17px 20px;font-size:14px;font-weight:600;color:var(--ink-2);line-height:1.45;border-left:1px solid var(--line)}
+  .spec-i:first-child{border-left:0;padding-left:0}
+  .spec-i span{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);font-weight:400;margin-bottom:5px}
+  @media(max-width:900px){.spec{grid-template-columns:repeat(2,1fr)}.spec-i{border-left:0;padding-left:0}}
+  @media(max-width:560px){.spec{grid-template-columns:1fr}}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .hero-note{margin-top:18px;font-size:13.5px;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+  .hero-note .dot{width:7px;height:7px;border-radius:50%;background:#16a34a;flex:0 0 auto}
+  @media(max-width:880px){.hero-grid{grid-template-columns:1fr;gap:36px}.hero h1{font-size:40px}.hero{padding:56px 0 40px}}
+
+  /* record card mock */
+  .stchip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 11px;border-radius:999px;font-size:11px;font-weight:640;letter-spacing:.02em}
+  .stchip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+  .stchip.appr{background:var(--good-bg);color:var(--good)}
+  .stchip.rev{background:var(--amber-bg);color:var(--amber)}
+  .record{border:1px solid var(--line);border-radius:var(--radius-lg);background:#fff;box-shadow:var(--shadow);overflow:hidden}
+  .record-top{display:flex;align-items:center;gap:9px;padding:16px 18px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+  .record-top .word{font-weight:680;letter-spacing:-.02em;font-size:14px}
+  .record-body{padding:22px}
+  .rb-eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-4)}
+  .rb-title{font-size:22px;font-weight:680;letter-spacing:-.02em;margin:6px 0 12px}
+  .rb-rail{display:flex;gap:22px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:14px}
+  .rb-k{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:2px}
+  .rb-v{font-size:12.5px;font-weight:600}
+  .rb-appr{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}
+  .rb-appr:first-of-type{border-top:none}
+  .rb-check{width:18px;height:18px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--good-bg);color:var(--good)}
+  .rb-appr .who{flex:1;color:var(--ink-2)}
+  .rb-appr .st{font-size:10.5px;font-weight:640;color:var(--good)}
+
+  .trust{padding:30px 0 8px}
+  .trust p{text-align:center;font-size:12.5px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+
+  section.block{padding:76px 0}
+  .sec-head{max-width:720px;margin:0 auto 46px;text-align:center}
+  /* A prose section is one centred editorial column: the heading centred, the
+     body left-aligned inside the same column, so the two share an axis instead
+     of the heading floating over a much wider block. */
+  .wrap.prose{max-width:min(var(--measure-wide), 100%)}
+  .wrap.prose .sec-head{margin-bottom:26px}
+  .wrap.prose p{max-width:none}
+  .prose-note{font-size:12.5px;color:var(--ink-4);line-height:1.6;margin:16px 0 0}
+  .sec-head h2{font-size:34px;line-height:1.12;font-weight:680}
+  .sec-head p{font-size:17px;color:var(--ink-3);margin-top:14px}
+
+  .problem{background:var(--ink);color:#fff;text-align:center}
+  .problem h2{font-size:32px;line-height:1.14;font-weight:680;max-width:920px;margin:0 auto}
+  .problem p{font-size:17px;color:#c9d2e4;margin:18px auto 0;max-width:820px;line-height:1.65}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:820px){.steps{grid-template-columns:1fr}}
+  .step{position:relative;padding:26px;background:#fff;border:1px solid var(--line);border-radius:var(--radius)}
+  .step-ic{width:40px;height:40px;border-radius:11px;background:var(--sky);color:var(--brand);display:flex;align-items:center;justify-content:center;margin-bottom:15px}
+  .step-ic svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .step h3{font-size:18px;font-weight:640;margin-bottom:7px}
+  .step p{font-size:14.5px;color:var(--ink-3);margin:0;line-height:1.6}
+
+  .judgment{padding:72px 0;text-align:center;background:var(--bg-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .judgment h2{font-size:40px;line-height:1.1;font-weight:680;max-width:820px;margin:0 auto}
+  .judgment p{font-size:18px;color:var(--ink-3);margin:20px auto 0;max-width:600px}
+
+  .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:center}
+  @media(max-width:880px){.split{grid-template-columns:1fr;gap:32px}}
+  .split h2{font-size:30px;line-height:1.14;font-weight:680}
+  .split p{font-size:16.5px;color:var(--ink-3);margin-top:16px;line-height:1.65}
+
+  /* review mock */
+  .bubble{max-width:90%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 14px;font-size:13px;color:var(--ink-3);box-shadow:var(--shadow-sm);margin-bottom:10px}
+  .bubble.me{align-self:flex-end;background:var(--sky);border-color:var(--sky-2);color:var(--brand-700);margin-left:auto}
+  .bubble b{color:var(--ink-2);font-weight:640}
+  .bubble .sig{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:var(--good);font-weight:640}
+
+  /* diff mock */
+  .diffcard{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:20px;box-shadow:var(--shadow)}
+  .diff-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+  .diff-row:first-of-type{border-top:none}
+  .diff-tag{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;flex:0 0 auto}
+  .diff-tag.add{background:var(--good-bg);color:var(--good)} .diff-tag.mod{background:var(--amber-bg);color:var(--amber)} .diff-tag.cut{background:#fdecea;color:#b42318}
+  .diff-id{font-family:var(--mono);font-size:11.5px;color:var(--brand);font-weight:600}
+  .diff-by{margin-left:auto;font-size:11px;color:var(--ink-4)}
+
+  .aud{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:880px){.aud{grid-template-columns:1fr}}
+  .aud-card{border:1px solid var(--line);border-radius:var(--radius);padding:26px;background:#fff;transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+  .aud-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+  .aud-tag{display:inline-flex;height:22px;align-items:center;padding:0 10px;border-radius:999px;font-size:10.5px;font-weight:640;letter-spacing:.03em;margin-bottom:12px}
+  .aud-card h3{font-size:17px;font-weight:640;margin-bottom:8px}
+  .aud-card p{font-size:14.5px;color:var(--ink-3);margin:0;line-height:1.6}
+
+  .sec{background:var(--bg-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .sec-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:start}
+  @media(max-width:880px){.sec-grid{grid-template-columns:1fr;gap:28px}}
+  .sec-claims{display:flex;flex-direction:column;gap:14px}
+  .claim{display:flex;gap:12px;align-items:flex-start}
+  .claim-ic{width:30px;height:30px;border-radius:8px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .claim-ic svg{width:16px;height:16px;stroke:var(--brand);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .claim p{font-size:14.5px;color:var(--ink-2);margin:0;line-height:1.55}
+  .roadmap{border:1px dashed var(--line-2);border-radius:var(--radius);padding:20px;background:#fff}
+  .roadmap .eyebrow{color:var(--ink-4)}
+  .roadmap p{font-size:14px;color:var(--ink-3);margin:10px 0 0;line-height:1.6}
+
+  /* Four tags on one line on a normal screen; they still wrap below 640px
+     rather than overflowing. */
+
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px;align-items:stretch}
+  @media(max-width:980px){.price-grid{grid-template-columns:1fr}}
+  .price-wide{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:18px}
+  @media(max-width:980px){.price-wide{grid-template-columns:1fr}}
+  /* Cards read left to right like every other block of text on the page. The
+     first version inherited the centred section heading, which put the tick
+     marks in the middle of the card with the text wrapped around them. */
+  .price-card{border:1px solid var(--line-2);border-radius:var(--radius);padding:24px 22px;background:#fff;
+    display:flex;flex-direction:column;text-align:left;position:relative}
+  .price-card.lead{border-color:var(--brand);box-shadow:0 12px 34px rgba(37,99,255,.12)}
+  .price-card .band{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4)}
+  .price-card .name{font-size:16.5px;font-weight:660;margin-top:12px}
+  .price-card .fig{font-size:34px;font-weight:690;letter-spacing:-.025em;margin-top:8px;line-height:1}
+  .price-card .per{font-size:12.5px;color:var(--ink-4);margin-top:8px}
+  .price-card ul{list-style:none;padding:0;margin:20px 0 0;font-size:13.5px;color:var(--ink-2);line-height:1.55;
+    display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:18px}
+  .price-card li{padding-left:24px;position:relative}
+  .price-card li:before{content:"";position:absolute;left:3px;top:4px;width:5px;height:9px;
+    border:solid var(--ink-4);border-width:0 1.7px 1.7px 0;transform:rotate(45deg)}
+  .price-card.lead li:before{border-color:var(--brand)}
+  .price-flag{position:absolute;top:-11px;left:22px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:#fff;background:var(--brand-700);border-radius:999px;padding:4px 11px}
+  .price-tags{display:flex;justify-content:center;gap:8px;flex-wrap:nowrap;margin-top:22px}
+  @media(max-width:640px){.price-tags{flex-wrap:wrap}}
+  .price-tag{font-size:12.5px;font-weight:560;white-space:nowrap;color:var(--ink-2);border:1px solid var(--line-2);border-radius:999px;padding:8px 16px}
+
+  .cta{padding:0 0 84px}
+  .cta-card{background:var(--ink);color:#fff;border-radius:var(--radius-lg);padding:64px 48px;text-align:center;position:relative;overflow:hidden}
+  .cta-card::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 320px at 50% 120%,rgba(37,99,255,.55) 0%,rgba(37,99,255,0) 60%)}
+  .cta-card>*{position:relative}
+  .cta-card h2{font-size:38px;font-weight:680;line-height:1.08}
+  .cta-card p{font-size:16.5px;color:#e7eefc;margin:16px auto 10px;max-width:560px;line-height:1.6}
+  .cta-card a.mailto{color:#fff;font-weight:640;text-decoration:underline;text-underline-offset:3px}
+  .cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  .cta-card .btn-secondary{background:transparent;color:#fff;border-color:rgba(255,255,255,.28)}
+  .cta-card .btn-secondary:hover{background:rgba(255,255,255,.08);border-color:#fff}
+
+  footer{border-top:1px solid var(--line);padding:36px 0}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .foot .muted{font-size:13px;color:var(--ink-3)}
+  .foot-links{display:flex;gap:22px;flex-wrap:wrap}
+  .foot-links a{font-size:13.5px;color:var(--ink-3)}
+  .foot-links a:hover{color:var(--ink)}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="lockup" href="#top" aria-label="ReqPub home">
+      <svg class="mark" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="3.5" width="33" height="33" rx="9" fill="none" stroke-width="3"/><polyline points="17 13 24 20 17 27" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ReqPub
+    </a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#audiences">Who it serves</a>
+      <a href="#security">Security</a>
+      <a href="#pricing">Pricing</a>
+      <a href="verify.html">Verify</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn-sm" href="/login/" style="display:inline-flex;align-items:center;font-weight:560;color:var(--ink-2)">Sign in</a>
+      <a class="btn btn-primary btn-sm" href="#intro">Request an introduction</a>
+    </div>
+  </div>
+</header>
+
+<a id="top"></a>
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Requirements Publications</span>
+      <h1 style="margin-top:14px">The accountability record for enterprise AI development.</h1>
+      <p class="hero-sub">Projects don't fail at the build. They fail at "that's not what we agreed."</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#intro">Request an introduction
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </a>
+      </div>
+      
+    </div>
+
+    <div class="record" aria-hidden="true">
+      <div class="record-top">
+        <span class="mark" style="width:22px;height:22px"><svg viewBox="0 0 40 40" width="22" height="22"><rect x="3.5" y="3.5" width="33" height="33" rx="9" fill="#2563FF"/><polyline points="17 13 24 20 17 27" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="word">Northwind</span>
+        <span class="stchip appr" style="margin-left:auto">Approved</span>
+      </div>
+      <div class="record-body">
+        <div class="rb-eyebrow">Gate &middot; Acceptance Baseline</div>
+        <div class="rb-title">Northwind Field Services</div>
+        <div class="rb-rail">
+          <div><div class="rb-k">Version</div><div class="rb-v">v2.0</div></div>
+          <div><div class="rb-k">Status</div><div class="rb-v">Approved</div></div>
+          <div><div class="rb-k">Requirements</div><div class="rb-v">47 · 12 Must</div></div>
+          <div><div class="rb-k">Fingerprint</div><div class="rb-v" style="font-family:var(--mono);font-weight:500">a3f2&hellip;9c41</div></div>
+          <div><div class="rb-k">Record state</div><div class="rb-v">0 gaps · 2 warnings</div></div>
+        </div>
+        <div class="rb-appr"><span class="rb-check">&#10003;</span><span class="who"><b>Product</b> · J. Okafor</span><span class="st">Approved</span></div>
+        <div class="rb-appr"><span class="rb-check">&#10003;</span><span class="who"><b>Engineering</b> · L. Two Bulls</span><span class="st">Approved</span></div>
+        <div class="rb-appr"><span class="rb-check">&#10003;</span><span class="who"><b>Client sponsor</b> · M. Reyes</span><span class="st">Approved</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap trust">
+  <p>Discovery · Approved baseline · A record that answers with you</p>
+</div>
+
+<section class="block">
+  <div class="wrap prose">
+    <div class="sec-head">
+      <span class="eyebrow">What changed</span>
+      <h2 style="margin-top:12px">The fee is moving to the outcome.</h2>
+    </div>
+    <p style="font-size:16.5px;line-height:1.7;color:var(--ink-2)">Clients are writing performance terms into AI contracts, and boards are asking for measured impact instead of pilots. Several of the largest advisory firms now say a meaningful share of their fees is tied to results rather than hours.</p>
+    <p style="font-size:16.5px;line-height:1.7;color:var(--ink-2)">An arrangement like that needs one thing before it can exist. The outcome, written down in numbers and agreed by both sides, before the work starts.</p>
+  </div>
+</section>
+
+<section class="block problem">
+  <div class="wrap">
+    <h2>Everyone agreed.<br>Nobody agreed to the same thing.</h2>
+    <p>Requirements live in decks, documents, and email threads. Six weeks in, the scope conversation starts. Reconstructing who approved what, and when, burns senior hours and goodwill. The build team inherits ambiguity. The budget inherits rework.</p>
+    <p>AI programs raise the stakes. RAND reports that by some estimates more than 80% of AI projects fail, roughly twice the rate of information technology projects that do not involve AI. That figure comes from interviews with 65 practitioners, so read it as most of them rather than as a measured rate. Gartner forecasts worldwide AI spending of $2.59 trillion in 2026. Almost none of it is protected by a document anyone can check.</p>
+  </div>
+</section>
+
+<section class="block" id="how">
+  <div class="wrap">
+    <div class="sec-head" style="margin-bottom:30px">
+      <span class="eyebrow">How it works</span>
+      <h2 style="margin-top:12px">Baseline it. Gate it. Export the record.</h2>
+      <p>All parties sign the measurable definition of done.</p>
+    </div>
+    <div class="spec">
+      <div class="spec-i"><span>01</span>Acceptance thresholds</div>
+      <div class="spec-i"><span>02</span>Requirements with fit criteria</div>
+      <div class="spec-i"><span>03</span>Named approvals</div>
+      <div class="spec-i"><span>04</span>One immutable baseline</div>
+      <div class="spec-i"><span>05</span>One fingerprint verified outside the platform</div>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-ic"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+        <h3>Baseline</h3>
+        <p>Server-numbered versions with permanent requirement IDs. "What changed since v1.2" is one click, answered requirement by requirement, not from memory.</p>
+      </div>
+      <div class="step">
+        <div class="step-ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h3>Gate</h3>
+        <p>A gate is a named decision on a fixed baseline. Name it what your method calls it: Discovery Complete, Design Baseline, Go-Live. The record stores its own readiness at that moment, gaps and warnings named, and nothing reads Approved while a sign-off is pending. One click builds the committee packet: the diff, the sign-offs, the fingerprint.</p>
+      </div>
+      <div class="step">
+        <div class="step-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></div>
+        <h3>Export</h3>
+        <p>Every export carries version, status, approvals, and the revision record on the cover. Three artifacts add a SHA-256 fingerprint of the exact baseline with its recipe printed on the page: the client report, the gate packet, and the implementation package. The document arrives with its own receipts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="judgment">
+  <div class="wrap">
+    <h2>The platform enforces the structure. Your team supplies the judgment.</h2>
+    <p>ReqPub doesn't write requirements and doesn't replace the people who do. It converts their judgment into a record that holds up.</p>
+  </div>
+</section>
+
+<section class="block" id="beside">
+  <div class="wrap split">
+    <div>
+      <span class="eyebrow">Works beside your platform</span>
+      <h2 style="margin-top:12px">Your program platform reports progress. ReqPub proves agreement.</h2>
+      <p>Trackers govern activity: milestones, status, dashboards. They are good at it, and we build none of it. No Gantt, no RAG rollups, no portfolio dashboards. On purpose.</p>
+      <p>What a tracker cannot own is what "done" means: requirements with fit criteria, decisions with owners, baselines with named sign-offs. That is the record. It feeds your tracker and your build tools, and there is nothing to migrate.</p>
+      <p>A gate review on a dashboard is a meeting. A gate on a fingerprinted baseline is evidence.</p>
+      <p>The same holds beside an AI implementation team, including a vendor's forward-deployed engineers. When the work includes an AI system, the record carries the acceptance table the client signs: dimension, metric, threshold. The build team consumes requirements.json on day one. The client signs the number that stops the meter, before the meter starts.</p>
+    </div>
+    <div aria-hidden="true">
+      <svg viewBox="0 0 520 320" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block">
+        <rect x="10" y="14" width="500" height="92" rx="14" fill="var(--bg-2)" stroke="var(--line-2)"/>
+        <text x="34" y="46" font-family="var(--mono)" font-size="9" letter-spacing="2" fill="var(--ink-4)">PROGRAM TRACKER &middot; GOVERNS ACTIVITY</text>
+        <text x="34" y="72" font-size="13.5" fill="var(--ink-3)">Milestones, status, dashboards. Its audit trail lives inside it.</text>
+        <path d="M 150 210 L 150 118" stroke="var(--brand)" stroke-width="2" fill="none"/>
+        <path d="M 144 126 L 150 116 L 156 126" stroke="var(--brand)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="164" y="158" font-family="var(--mono)" font-size="11" fill="var(--brand)">requirements.json</text>
+        <text x="164" y="174" font-size="11" fill="var(--ink-4)">the plan imports from the record</text>
+        <path d="M 396 118 L 396 206" stroke="var(--ink-4)" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+        <path d="M 390 198 L 396 208 L 402 198" stroke="var(--ink-4)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="388" y="158" font-size="11" fill="var(--ink-4)" text-anchor="end">measures against</text>
+        <rect x="10" y="214" width="500" height="92" rx="14" fill="var(--ink)" stroke="var(--brand)" stroke-width="1.5"/>
+        <text x="34" y="246" font-family="var(--mono)" font-size="9" letter-spacing="2" fill="#7ea4ff">THE RECORD &middot; GOVERNS AGREEMENT</text>
+        <text x="34" y="272" font-size="13.5" fill="#e9edf3">Baselines, named sign-offs, fit criteria, one fingerprint.</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap split">
+    <div>
+      <span class="eyebrow">Client review</span>
+      <h2 style="margin-top:12px">Approval from a link. No rollout, no seats, no IT ticket.</h2>
+      <p>The people who approve the work are the busiest people on it. Reviewers open a link, comment in thread, and approve on the record. No accounts, no new software. Their name and timestamp travel with the requirement from that day forward.</p>
+    </div>
+    <div style="display:flex;flex-direction:column" aria-hidden="true">
+      <div class="bubble"><b>M. Reyes (Client sponsor):</b> The safeguarding flow needs clinical sign-off before launch.</div>
+      <div class="bubble me"><b>Team:</b> Added as FR-021 with a clinical review gate. Does the wording hold?</div>
+      <div class="bubble"><b>M. Reyes:</b> Wording holds. Approved.<span class="sig">&#10003; Approved · 14 May, 4:12pm</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" style="padding-top:0">
+  <div class="wrap split">
+    <div class="diffcard" aria-hidden="true">
+      <div class="rb-eyebrow" style="margin-bottom:12px">Changes since v1.2</div>
+      <div class="diff-row"><span class="diff-tag add">ADD</span><span class="diff-id">FR-021</span><span style="color:var(--ink-3)">Clinical review gate</span><span class="diff-by">J. Okafor</span></div>
+      <div class="diff-row"><span class="diff-tag mod">MOD</span><span class="diff-id">FR-014</span><span style="color:var(--ink-3)">Offline capture window</span><span class="diff-by">L. Two Bulls</span></div>
+      <div class="diff-row"><span class="diff-tag cut">CUT</span><span class="diff-id">FR-009</span><span style="color:var(--ink-3)">Legacy import</span><span class="diff-by">M. Reyes</span></div>
+    </div>
+    <div>
+      <span class="eyebrow">Change</span>
+      <h2 style="margin-top:12px">Change you can defend.</h2>
+      <p>Scope moves. That's the job. What matters is whether the record moved with it. Every addition, edit, and cut is diffed between baselines and tied to a named approval. The next scope conversation starts from the approved record, not the email archive.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="fingerprint" style="padding-top:0">
+  <div class="wrap split">
+    <div>
+      <span class="eyebrow">Proof</span>
+      <h2 style="margin-top:12px">One baseline. Three artifacts. One fingerprint.</h2>
+      <p>One click on an approved baseline produces the artifacts. The client baseline report: the executive summary, the client-safe brief, the revision record, behind a designed cover. Only what a published brief may contain. Internal fields are absent, not hidden.</p>
+      <p>The implementation package holds five things. requirements.json, carrying every requirement's permanent ID, statement, fit criterion, priority, and origin. The signed acceptance thresholds, each anchored to a named eval set. The acceptance checklist. The exact diff since the last baseline. The full document.</p>
+      <p>The SOW exhibit: the acceptance baseline formatted to attach to a statement of work. The acceptance table, the requirements with fit criteria, the recorded sign-offs, blank lines for the exhibit letter and the agreement date, and the verification recipe. Counsel fills in the contract references. The record supplies everything else.</p>
+      <p>The same SHA-256 sits on all of them. The document the client signed, the exhibit attached to the contract, and the package the builders received are provably the same baseline.</p>
+    </div>
+    <div class="diffcard" aria-hidden="true">
+      <div class="rb-eyebrow" style="margin-bottom:12px">One fingerprint</div>
+      <div class="diff-row"><b style="color:var(--ink-2)">Client baseline report</b><span style="margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink-3)">SHA-256 &middot; a3f2&hellip;9c41</span></div>
+      <div class="diff-row"><b style="color:var(--ink-2)">Implementation package</b><span style="margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink-3)">SHA-256 &middot; a3f2&hellip;9c41</span></div>
+      <div class="diff-row" style="color:var(--good);font-weight:640;font-size:12.5px">&#10003;&nbsp; Provably the same baseline</div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">In their words</span>
+      <h2 style="margin-top:12px">How people describe it to their own teams</h2>
+    </div>
+    <p style="max-width:760px"><b>One sentence.</b> ReqPub is where the client signs a measurable definition of done for an AI or technology program, a fingerprinted baseline the engineers build against, so the scope conversation six weeks in starts from the record.</p>
+    <p style="max-width:760px"><b>One paragraph.</b> When the builders start fast and the definition of success is still vague, ReqPub fixes the artifact, not the meeting. Requirements get measurable fit criteria and priorities. The client approves by link, with a name and a timestamp on every sign-off. The baseline gets a fingerprint. The engineers get requirements.json and an acceptance checklist on day one. The client gets a report, and the contract gets an exhibit, that carry the same fingerprint. It is not a tracker and it does not replace program tools. It is the evidence of what was agreed, and it verifies outside the platform.</p>
+  </div>
+</section>
+
+<section class="block" id="audiences" style="background:var(--bg-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Who it serves</span>
+      <h2 style="margin-top:12px">Four positions on every serious program</h2>
+    </div>
+    <div class="aud">
+      <div class="aud-card">
+        <span class="aud-tag" style="background:var(--sky);color:var(--brand-700)">Leading the work</span>
+        <h3>Win it. Prove it. Get asked back.</h3>
+        <p>The hardest part of the next program is proving the last one worked. A measurable definition of done in the proposal separates you from whoever is offering a discovery phase. The same record at the close, with the thresholds met and named, is the reference you hand to the next client.</p>
+      </div>
+      <div class="aud-card">
+        <span class="aud-tag" style="background:#eef7ee;color:#15803d">Funding the work</span>
+        <h3>Know exactly what you are buying.</h3>
+        <p>You are approving spend on something that does not exist yet. Acceptance thresholds are dimension, metric and threshold, agreed before the build starts, so you approve a measurement rather than an adjective. Every change is diffed against the baseline you signed and attributed on the day it happened. The record verifies without us, and without whoever built it.</p>
+      </div>
+      <div class="aud-card">
+        <span class="aud-tag" style="background:#e6f7fb;color:#155e75">Asked to weigh in</span>
+        <h3>Say it once, on the record, from a link.</h3>
+        <p>Your input stops getting lost between versions. Open a link, weigh in, and your name travels with the requirement from that day forward.</p>
+      </div>
+      <div class="aud-card">
+        <span class="aud-tag" style="background:#f1ebfd;color:var(--purple)">Building against it</span>
+        <h3>Build against the baseline.</h3>
+        <p>Approved, testable requirements with fit criteria and permanent IDs, delivered as requirements.json and an acceptance checklist. Feed the approved baseline to your tools, your tests, or your agents. Build against the record, not an interpretation of a deck.</p>
+      </div>
+      <p style="margin-top:22px;font-size:15px;color:var(--ink-3)">Four positions, one document, and no view about which of them is right.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block sec" id="security">
+  <div class="wrap">
+    <div class="sec-head" style="margin-bottom:38px">
+      <span class="eyebrow">Security</span>
+      <h2 style="margin-top:12px">Built for teams that answer to procurement.</h2>
+    </div>
+    <div class="sec-grid">
+      <div class="sec-claims">
+        <div class="claim"><span class="claim-ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><p>Isolated project data and role-based access, enforced in the database on every read and write.</p></div>
+        <div class="claim"><span class="claim-ic"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><p>An append-only audit log of every version, approval, and inbound submission. Every field and row carries attribution stamped by the server.</p></div>
+        <div class="claim"><span class="claim-ic"><svg viewBox="0 0 24 24"><path d="M12 11c1.66 0 3 1.34 3 3v4"/><path d="M9 18v-4a3 3 0 0 1 .35-1.41"/><path d="M6.6 15.3A6 6 0 0 1 18 14v3"/><path d="M4.7 12A8.5 8.5 0 0 1 20.3 14"/></svg></span><p>Every baseline carries a SHA-256 fingerprint with its recipe printed on the exported document, so anyone holding the record can recompute it. When a client signs, the receipt is signed with Ed25519 and timestamped by two independent authorities. A standalone tool checks all of it offline. A fingerprint on its own proves content. It takes the receipt to prove who signed and when.</p></div>
+        <div class="claim"><span class="claim-ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><p>1,405 automated checks run on every change, 841 of them against a real Postgres database across 35 suites (as of v3.0.0). Security findings and their fixes are published in the repository, including the ones we caused ourselves.</p></div>
+        <div class="claim"><span class="claim-ic"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><p>Export everything, any time. Your record is yours.</p></div>
+        <div class="claim"><span class="claim-ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><p>Version 3.0.0. Assurance state: self-attested. That means our own gates and suites, published and reproducible, and nothing verified by a third party yet. <a href="/docs/">What that covers, and what it does not</a>.</p></div>
+      </div>
+      <div class="roadmap">
+        <span class="eyebrow">What is not done</span>
+        <p>No third-party penetration test has been commissioned yet, no SOC 2 engagement is signed, and there is no SSO or SCIM. E-signature and cryptographic sealing were on this list and are now live, which is why they are no longer here. We list what is missing for the same reason we publish our own security findings. Once a reader finds one omission, the next question is what else was left out.</p>
+      </div></div></div>
+</section>
+
+<section class="block" id="pricing">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Pricing</span>
+      <h2 style="margin-top:12px">Priced per record, not per person.</h2>
+      <p>One price for the program, whoever is on it. Everyone who authors, reviews, approves, or signs is included. A record that costs more when another reviewer joins is a record that will not get the review it needed.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card"><div class="band">Before the contract</div><div class="name">Pursuit record</div><div class="fig">$7,500</div><div class="per">Per pursuit</div><ul><li>A scope-bearing baseline for the proposal or funding stage</li><li>Holds no client production data</li><li>Credits in full toward the engagement tier when the work proceeds</li></ul></div>
+      <div class="price-card"><div class="band">Under $5M</div><div class="name">Engagement record</div><div class="fig">$38,500</div><div class="per">Per engagement, 12 months</div><ul><li>Sealing, the evidence pack, and the close package</li><li>Every seat and every reviewer included</li><li>Exports that verify without us</li></ul></div>
+      <div class="price-card lead"><span class="price-flag">Most programs</span><div class="band">$5M to $25M</div><div class="name">Program record</div><div class="fig">$85,000</div><div class="per">Per program, 12 months</div><ul><li>Multiple baselines and multiple gates</li><li>Webhooks and the agent read surface</li><li>Everything in the engagement tier</li></ul></div>
+    </div>
+    <p style="font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-4);margin:30px 0 12px">Larger commitments</p>
+    <div class="price-wide">
+      <div class="price-card"><div class="band">Above $25M</div><div class="name">Enterprise program record</div><div class="fig">$185,000</div><div class="per">Per program, or per portfolio</div><ul><li>Portfolios running several workstreams against one record</li><li>Priority incident response</li><li>A verification session delivered to your security function</li></ul></div>
+      <div class="price-card"><div class="band">Drawn down over time</div><div class="name">Programme agreement</div><div class="fig">$750,000</div><div class="per">Ten program records, 24 months</div><ul><li>Drawn down as you need them</li><li>One agreement instead of ten</li><li>Everything in the program tier</li></ul></div>
+    </div>
+      <p style="font-size:14px;color:var(--ink-3);margin-top:26px;padding-top:20px;border-top:1px solid var(--line);text-align:center">The price is fixed. It does not move with the size of the program and it does not move with the number of people who touch the record. The Program record is $85,000 on a $5M program and $85,000 on a $25M one. Whether that is worth it is your judgment and not a claim we make for you.</p>
+      <div class="price-tags">
+        <span class="price-tag">Every seat included</span>
+        <span class="price-tag">Every reviewer included</span>
+        <span class="price-tag">No per-seat math</span>
+        <span class="price-tag">Fixed price, never a percentage</span>
+      </div>
+  </div>
+</section>
+
+
+<section class="cta" id="intro">
+  <div class="wrap">
+    <div class="cta-card">
+      <h2>Available by introduction.</h2>
+      <p>ReqPub is rolling out through the teams already using it. If someone told you about us, they can bring you in. Email them and ask for the introduction, and they'll connect you with our team directly.</p>
+      <p>No referral yet? Write us at <a class="mailto" href="mailto:team@reqpub.com">team@reqpub.com</a> and tell us about the project you're running. We'll take it from there.</p>
+      <div class="cta-btns">
+        <a class="btn btn-primary" href="mailto:team@reqpub.com?subject=ReqPub%20introduction">Email team@reqpub.com</a>
+        <a class="btn btn-secondary" href="/login/">Sign in</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <a class="lockup" href="#top" style="font-size:17px">
+      <svg class="mark" viewBox="0 0 40 40" style="width:24px;height:24px" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="3.5" width="33" height="33" rx="9" fill="none" stroke-width="3"/><polyline points="17 13 24 20 17 27" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ReqPub
+    </a>
+    <div class="foot-links">
+      <a href="/verify.html">Verify a baseline</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/cookies.html">Cookies</a>
+      <a href="/acceptable-use.html">Acceptable use</a>
+      <a href="/do-not-share.html">Confidentiality</a>
+      <a href="mailto:team@reqpub.com">team@reqpub.com</a>
+    </div>
+    <span class="muted">ReqPub · Requirements Publications · Bentonville, AR</span>
+  </div>
+</footer>
+
+</body>
+</html>

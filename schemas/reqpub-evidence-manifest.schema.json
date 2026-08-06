@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reqpub.com/schemas/reqpub-evidence-manifest.schema.json",
+  "title": "ReqPub evidence pack manifest",
+  "description": "manifest.json inside an evidence pack: every other file in the pack with its SHA-256 over exact bytes, per docs/VERIFY.md section 11. Verification is strict both ways: a listed file missing or changed fails, and a file present but unlisted fails. generatedAt lives only here so per-file hashes stay deterministic. Additive-only within formatVersion 1.",
+  "type": "object",
+  "required": [
+    "format",
+    "formatVersion",
+    "project",
+    "generatedAt",
+    "recipe",
+    "files"
+  ],
+  "properties": {
+    "format": {
+      "const": "reqpub-evidence-manifest"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "generatedAt": {
+      "type": "string",
+      "description": "ISO 8601 moment of production. Appears in no other file of the pack."
+    },
+    "recipe": {
+      "type": "string",
+      "description": "The manifest recipe restated in words."
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "sha256"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Path inside the pack, forward slashes."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "SHA-256 over the exact bytes of the named file."
+          }
+        }
+      }
+    }
+  }
+}

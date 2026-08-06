@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; base-uri 'self'; frame-ancestors 'none'" />
+<title>Verify a baseline · ReqPub</title>
+<meta name="description" content="Recompute a ReqPub baseline fingerprint in your browser. No upload, no account, no network call." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='7' fill='%232563FF'/%3E%3Cpolyline points='14 11 19 16 14 21' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  .vf-wrap{max-width:760px;margin:0 auto;padding:52px 22px 80px}
+  /* The card can use the full column; the prose cannot. At 760px and 16px a
+     line ran about 90 characters, and the small print about 115. Both are
+     past the readable range, so the text is capped at the site measure while
+     the input keeps its width. */
+  .vf-wrap > p{max-width:var(--measure-wide)}
+  .vf-note{max-width:var(--measure-wide)}
+  .vf-wrap h1{font-size:30px;letter-spacing:-.02em;margin:0 0 10px}
+  .vf-wrap p{line-height:1.65}
+  .vf-card{border:1px solid var(--line,#e3e6ea);border-radius:14px;padding:22px 24px;margin-top:22px;background:#fff}
+  .vf-card label{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#5b6472;margin:0 0 7px}
+  .vf-card textarea{width:100%;min-height:200px;border:1px solid #d7dbe1;border-radius:10px;padding:12px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical;box-sizing:border-box}
+  .vf-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .vf-file{font-size:13px}
+  .vf-btn{appearance:none;border:0;border-radius:10px;background:#2563FF;color:#fff;font-weight:600;font-size:14px;padding:11px 20px;cursor:pointer}
+  .vf-btn:disabled{opacity:.5;cursor:default}
+  .vf-result{margin-top:18px;border-radius:12px;padding:16px 18px;font-size:14px;line-height:1.6;display:none}
+  .vf-result.show{display:block}
+  .vf-result.good{background:#eefaf2;border:1px solid #bfe8cd;color:#155d33}
+  .vf-result.bad{background:#fdefef;border:1px solid #f2c6c6;color:#8a2323}
+  .vf-result.info{background:#f4f6fa;border:1px solid #dde2ea;color:#333c49}
+  .vf-hash{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;word-break:break-all;display:block;margin-top:4px}
+  .vf-note{font-size:12.5px;color:#5b6472;line-height:1.6;margin-top:20px}
+</style>
+</head>
+<body>
+<header class="site-head"><div class="wrap bar">
+  <a class="lockup" href="/"><svg class="mark" viewBox="0 0 40 40"><rect x="3.5" y="3.5" width="33" height="33" rx="9" fill="none" stroke-width="3"/><polyline points="17 13 24 20 17 27" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>ReqPub</a>
+  <nav class="links">
+    <a href="verify.html" class="active">Verify</a>
+    <a href="terms.html">Terms</a>
+    <a href="privacy.html">Privacy</a>
+    <a class="btn btn-primary btn-sm" href="/app/">Open the app</a>
+  </nav>
+</div></header>
+
+<main class="vf-wrap">
+  <p class="eyebrow" style="color:#2563FF;font-weight:640;letter-spacing:.08em;text-transform:uppercase;font-size:12px;margin:0 0 8px">Independent verification</p>
+  <h1>Recompute a baseline fingerprint</h1>
+  <p>Every ReqPub baseline carries a SHA-256 fingerprint computed from the stored snapshot. Paste or upload an exported baseline bundle below. Your browser recomputes it with the exact code the app uses, then compares the result to the fingerprint the bundle carries. Everything runs on this page: no upload, no account, no network call, and this page's security policy forbids one.</p>
+
+  <div class="vf-card">
+    <label for="vf-input">Baseline bundle (JSON)</label>
+    <textarea id="vf-input" spellcheck="false" placeholder='Paste the contents of a file exported with "Verification bundle (JSON)" from any baseline, or choose the file below.'></textarea>
+    <div class="vf-row">
+      <input class="vf-file" type="file" id="vf-file" accept=".json,application/json">
+      <span style="flex:1"></span>
+      <button class="vf-btn" id="vf-go" type="button">Verify</button>
+    </div>
+    <div class="vf-result" id="vf-result" role="status"></div>
+  </div>
+
+  <p class="vf-note">The recipe, restated: SHA-256 over the canonical JSON, object keys sorted, arrays in order, UTF-8, of the bundle's label, seq, and snapshot. The full specification is <code>docs/VERIFY.md</code> in the repository, precise enough to reimplement from the document alone. Beside it sits <code>tools/reqpub-verify.mjs</code>, a standalone checker that runs offline with Node and imports nothing from ReqPub. CI asserts on every push that the specification, this page, and that tool agree byte for byte.</p>
+  <p class="vf-note">What a match proves: this file's snapshot is exactly the baseline the fingerprint was recorded for. What it does not prove: who produced it or when. A fingerprint on its own is not a signature and not a timestamp. That is what sealing adds. When a client signs a baseline, the receipt is signed with Ed25519 under a published key and timestamped by two independent RFC 3161 authorities. A third party can then establish who signed, and that the record existed at that moment, without asking us.</p>
+</main>
+
+<script type="module" src="verify.js"></script>
+</body>
+</html>

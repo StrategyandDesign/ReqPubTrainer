@@ -1,0 +1,136 @@
+/* ReqPub shared site styles - landing, legal pages, signup, footer, cookie consent */
+:root{
+  --ink:#0a0a0a; --ink-2:#1e1e1e; --ink-3:#334155; --ink-4:#475569;
+  --line:#e5e7eb; --line-2:#d1d5db; --bg:#ffffff; --bg-2:#fafafb; --bg-3:#f5f6f8;
+  --brand:#2563FF; --brand-600:#1d4ed8; --brand-700:#1e40af; --sky:#e6f0ff; --sky-2:#dbe7ff;
+  /* One measure for the whole site. A line of body text is comfortable between
+     45 and 75 characters; 66 is the classic optimum. Before this existed, a
+     paragraph took whatever width its parent grid happened to give it, which
+     produced 95-character lines and a 360px dead gutter at the same time: too
+     long to read and too narrow to look deliberate. */
+  --measure:66ch; --measure-wide:74ch;
+  --radius:14px; --radius-sm:10px; --radius-lg:22px;
+  --shadow:0 1px 2px rgba(0,0,0,.04), 0 18px 44px rgba(15,23,42,.07);
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brand);font-weight:600}
+
+/* logo lockup */
+.mark{width:30px;height:30px;flex:0 0 auto}
+.mark rect,.mark polyline{stroke:var(--ink)}
+.lockup{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:20px;letter-spacing:-.035em;color:var(--ink)}
+.lockup .mark rect,.lockup .mark polyline{stroke:currentColor}
+.lockup.on-dark{color:#fff}
+.lockup.on-dark .mark rect,.lockup.on-dark .mark polyline{stroke:#fff}
+.site-foot .lockup{font-weight:700;letter-spacing:-.035em}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px;border-radius:12px;font-weight:600;font-size:15px;letter-spacing:-.01em;cursor:pointer;border:1px solid transparent;transition:transform .15s var(--ease),background .15s var(--ease),box-shadow .15s var(--ease),border-color .15s var(--ease);white-space:nowrap}
+.btn:hover{text-decoration:none}
+.btn svg{width:17px;height:17px}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-primary:hover{background:var(--brand-600);transform:translateY(-1px);box-shadow:0 10px 24px rgba(37,99,255,.30)}
+.btn-secondary{background:#fff;color:var(--brand);border-color:var(--line-2)}
+.btn-secondary:hover{border-color:var(--brand);background:var(--sky)}
+.btn-sm{height:38px;padding:0 14px;font-size:14px}
+
+/* site header */
+.site-head{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.86);backdrop-filter:saturate(160%) blur(12px);border-bottom:1px solid var(--line)}
+.site-head .bar{display:flex;align-items:center;justify-content:space-between;height:64px}
+.site-head .links{display:flex;align-items:center;gap:26px}
+/* :not(.btn) matters. This rule has specificity (0,2,1) and .btn-primary has
+   (0,1,0), so without the exclusion every primary button sitting in a nav
+   lost its white text and rendered slate on blue at a contrast ratio of
+   2.12 to 1, against a WCAG AA requirement of 4.5. */
+.site-head .links a:not(.btn){font-size:14.5px;color:var(--ink-3);font-weight:500}
+.site-head .links a:hover{color:var(--ink);text-decoration:none}
+.site-head .links a.active{color:var(--ink);font-weight:600}
+@media(max-width:720px){.site-head .links{display:none}}
+
+/* legal pages */
+.legal{padding:54px 0 80px}
+.legal-grid{display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;align-items:start}
+@media(max-width:880px){.legal-grid{grid-template-columns:1fr;gap:28px}}
+.legal-side{position:sticky;top:88px}
+@media(max-width:880px){.legal-side{position:static}}
+.legal-side h4{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4);margin:0 0 12px}
+.legal-side nav{display:flex;flex-direction:column;gap:3px}
+.legal-side nav a{font-size:13.5px;color:var(--ink-3);padding:5px 10px;border-radius:8px;border-left:2px solid transparent}
+.legal-side nav a:hover{background:var(--bg-3);color:var(--ink);text-decoration:none}
+.legal-doc{max-width:760px}
+.legal-doc h1{font-size:38px;line-height:1.1;letter-spacing:-.025em;font-weight:680;margin:0 0 8px}
+.legal-doc .updated{font-family:var(--mono);font-size:12.5px;color:var(--ink-4);margin:0 0 8px}
+.legal-doc .lead{font-size:17px;color:var(--ink-3);margin:14px 0 26px}
+.legal-doc h2{font-size:22px;letter-spacing:-.02em;font-weight:660;margin:38px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+.legal-doc h3{font-size:17px;font-weight:620;margin:22px 0 6px}
+.legal-doc p,.legal-doc li{color:var(--ink-2);font-size:15.5px}
+.legal-doc ul,.legal-doc ol{padding-left:22px;margin:10px 0}
+.legal-doc li{margin:6px 0}
+.legal-doc strong{color:var(--ink)}
+.legal-doc code,.legal-doc .ph{font-family:var(--mono);font-size:.9em;background:var(--bg-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--ink-3)}
+.legal-doc table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;border:1px solid var(--line-2);border-radius:10px;overflow:hidden}
+.legal-doc th{background:var(--bg-3);text-align:left;font-weight:620;color:var(--ink);padding:10px 12px;border-bottom:1px solid var(--line-2);font-size:13px}
+.legal-doc td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+.legal-doc tr:last-child td{border-bottom:none}
+.callout{border:1px solid var(--sky-2);background:#f7faff;border-left:3px solid var(--brand);border-radius:12px;padding:16px 18px;margin:20px 0;font-size:14.5px;color:var(--ink-2)}
+.callout strong{color:var(--brand)}
+
+/* dark footer (GitHub-style) */
+.site-foot{background:var(--ink);color:#cfd8e3;border-top:1px solid var(--line)}
+.site-foot .top{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:32px;padding:52px 0 36px}
+@media(max-width:780px){.site-foot .top{grid-template-columns:1fr 1fr;gap:28px}}
+.site-foot .col h5{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#fff;margin:0 0 14px;font-weight:600}
+.site-foot .col a:not(.lockup),.site-foot .col button{display:block;background:none;border:none;text-align:left;padding:0;cursor:pointer;font:inherit;color:#aebacb;font-size:14px;margin-bottom:10px;text-decoration:none}
+.site-foot .col a:not(.lockup):hover,.site-foot .col button:hover{color:#fff;text-decoration:none}
+.site-foot .col a.lockup{display:inline-flex;color:#fff;font-weight:700;letter-spacing:-.035em;margin:0 0 14px}
+.site-foot .blurb{font-size:13.5px;color:#8fa0b6;line-height:1.6;margin:14px 0 0;max-width:280px}
+.site-foot .bottom{border-top:1px solid #23262d;padding:18px 0;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.site-foot .bottom .legal-links{display:flex;flex-wrap:wrap;gap:18px}
+.site-foot .bottom a,.site-foot .bottom button{color:#8fa0b6;font-size:12.5px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);letter-spacing:.04em;text-decoration:none}
+.site-foot .bottom a:hover,.site-foot .bottom button:hover{color:#fff}
+.site-foot .copy{color:#6b7a90;font-size:12.5px;font-family:var(--mono)}
+
+/* cookie consent */
+#rp-cookie-banner{position:fixed;left:18px;right:18px;bottom:18px;z-index:80;max-width:560px;margin:0 auto;background:#fff;border:1px solid var(--line-2);border-radius:16px;box-shadow:0 18px 50px rgba(15,23,42,.22);padding:18px 20px;display:none}
+#rp-cookie-banner.show{display:block;animation:rpup .3s var(--ease)}
+@keyframes rpup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#rp-cookie-banner p{margin:0 0 14px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+#rp-cookie-banner .row{display:flex;gap:10px;flex-wrap:wrap}
+.rp-modal-back{position:fixed;inset:0;z-index:90;background:rgba(10,10,10,.45);display:none;align-items:center;justify-content:center;padding:22px}
+.rp-modal-back.show{display:flex}
+.rp-modal{background:#fff;border-radius:18px;max-width:560px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,.3);padding:26px 26px 22px}
+.rp-modal h3{margin:0 0 6px;font-size:21px;font-weight:680;letter-spacing:-.02em}
+.rp-modal .desc{font-size:14px;color:var(--ink-3);margin:0 0 18px}
+.rp-pref{border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:12px}
+.rp-pref .h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:5px}
+.rp-pref .h strong{font-size:15px}
+.rp-pref p{margin:0;font-size:13px;color:var(--ink-3);line-height:1.55}
+.rp-pill{font-size:11px;font-family:var(--mono);color:var(--ink-4);background:var(--bg-3);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.rp-switch{position:relative;width:42px;height:24px;flex:0 0 auto}
+.rp-switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.rp-switch .track{position:absolute;inset:0;background:var(--line-2);border-radius:999px;transition:.18s}
+.rp-switch .knob{position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.rp-switch input:checked+.track{background:var(--brand)}
+.rp-switch input:checked+.track+.knob{transform:translateX(18px)}
+.rp-switch input:disabled+.track{background:var(--brand);opacity:.5}
+.rp-modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ---- Measure ----------------------------------------------------------
+   .prose narrows a section to a readable column and centres it, so the space
+   left over sits evenly on both sides instead of piling up on the right.
+   .measure caps a single passage inside a wider layout, for the case where
+   the right side genuinely carries something else. */
+.wrap.prose{max-width:min(var(--measure-wide), 100%)}
+.measure{max-width:var(--measure)}
+.measure-wide{max-width:var(--measure-wide)}
+.block .sec-head + p, .block p.lead, .prose p, .problem p{max-width:var(--measure-wide)}
+.problem p{margin-left:auto;margin-right:auto}

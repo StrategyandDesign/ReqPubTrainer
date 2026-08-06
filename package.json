@@ -1,0 +1,28 @@
+{
+  "name": "reqpub",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ReqPub - discovery to versioned, approved, testable requirements. Static frontend (GitHub Pages) + Supabase backend.",
+  "scripts": {
+    "test": "node tests/domain.test.mjs && node tests/sync.test.mjs && node tests/share.test.mjs && node tests/msgdedup.test.mjs && node tests/engagement.test.mjs && node tests/health.test.mjs && node tests/templates.test.mjs && node tests/fingerprint.test.mjs && node tests/views.test.mjs && node tests/projdedup.test.mjs && node tests/zipstore.test.mjs && node tests/implpkg.test.mjs && node tests/intake.test.mjs && node tests/update.test.mjs && node tests/exec.test.mjs && node tests/verify-cli.test.mjs && node tests/update-dashboard.test.mjs && node tests/update-archive.test.mjs && node tests/retire.test.mjs && node tests/projects-view.test.mjs && node tests/help.test.mjs && node tests/doc-presentation.test.mjs && node tests/record-grammar.test.mjs && node tests/chain-recipe.test.mjs && node tests/seal-fixture.test.mjs && node tests/seal-bundle.test.mjs && node tests/cli-redteam.test.mjs && node tests/seal-zip-integrity.test.mjs && node tests/attach-paste.test.mjs && node tests/webhook-scheme.test.mjs && node tests/mcp-scheme.test.mjs && node tests/evidencepack.test.mjs && node tests/evidence-cli.test.mjs && node tests/capabilities.test.mjs && node tests/mcp-fuzz.test.mjs && node tests/completeness-audit.test.mjs && node tests/rotation-drill.test.mjs && node tests/pursuit-lineage.test.mjs && node tests/record-delivery.test.mjs",
+    "test:backend": "node tests/backend-e2e/migrations.test.mjs && node tests/backend-e2e/run.mjs && node tests/backend-e2e/brand-overlay.test.mjs && node tests/backend-e2e/sme-workspace.test.mjs && node tests/backend-e2e/attachments.test.mjs && node tests/backend-e2e/partner-notes.test.mjs && node tests/backend-e2e/approvals.test.mjs && node tests/backend-e2e/seed-prds.test.mjs && node tests/backend-e2e/deploy-fathering.test.mjs && node tests/backend-e2e/new-reply.test.mjs && node tests/backend-e2e/discovery-promote.test.mjs && node tests/backend-e2e/version-integrity.test.mjs && node tests/backend-e2e/esign.test.mjs && node tests/backend-e2e/name-sync.test.mjs && node tests/backend-e2e/updates.test.mjs && node tests/backend-e2e/record-templates.test.mjs && node tests/backend-e2e/walkthrough.test.mjs && node tests/backend-e2e/partner-identity.test.mjs && node tests/backend-e2e/update-panel.test.mjs && node tests/backend-e2e/weekly-update.test.mjs && node tests/backend-e2e/help.test.mjs && node tests/backend-e2e/chain.test.mjs && node tests/backend-e2e/sealing.test.mjs && node tests/backend-e2e/sealing-redteam.test.mjs && node tests/backend-e2e/attachment-hash.test.mjs && node tests/backend-e2e/webhooks.test.mjs && node tests/backend-e2e/mcp.test.mjs && node tests/backend-e2e/evidence.test.mjs && node tests/backend-e2e/book-practice.test.mjs && node tests/backend-e2e/pursuit-lineage.test.mjs && node tests/backend-e2e/authz-matrix.test.mjs && node tests/backend-e2e/token-injection.test.mjs && node tests/backend-e2e/limits-budgets.test.mjs && node tests/backend-e2e/storage-probing.test.mjs && node tests/spec-schemas.test.mjs && node tests/book-practice.test.mjs",
+    "seed:prds": "node tools/gen-prd-seed.mjs",
+    "counts": "node scripts/record-counts.mjs",
+    "ci": "node tools/docs-gate.mjs --selftest && node tools/docs-gate.mjs && node tools/audit.mjs && node tools/capabilities-gate.mjs --selftest && node tools/capabilities-gate.mjs && node tools/claims-gate.mjs && node tools/copy-gate.mjs && node tools/design-gate.mjs --selftest && node tools/design-gate.mjs && node tools/supply-chain-gate.mjs --selftest && node tools/supply-chain-gate.mjs && node scripts/spec-schema-parity.mjs && node tests/verify-cli.test.mjs",
+    "test:offline": "node tests/domain.test.mjs && node tests/sync.test.mjs && node tests/share.test.mjs && node tests/msgdedup.test.mjs && node tests/engagement.test.mjs && node tests/health.test.mjs && node tests/templates.test.mjs && node tests/fingerprint.test.mjs && node tests/views.test.mjs && node tests/projdedup.test.mjs && node tests/zipstore.test.mjs && node tests/implpkg.test.mjs && node tests/intake.test.mjs && node tests/update.test.mjs && node tests/exec.test.mjs && node tests/verify-cli.test.mjs && node tests/update-dashboard.test.mjs && node tests/update-archive.test.mjs && node tests/retire.test.mjs && node tests/projects-view.test.mjs && node tests/help.test.mjs && node tests/doc-presentation.test.mjs && node tests/record-grammar.test.mjs && node tests/chain-recipe.test.mjs && node tests/seal-fixture.test.mjs && node tests/seal-bundle.test.mjs && node tests/cli-redteam.test.mjs && node tests/seal-zip-integrity.test.mjs && node tests/attach-paste.test.mjs && node tests/webhook-scheme.test.mjs && node tests/mcp-scheme.test.mjs && node tests/evidencepack.test.mjs && node tests/evidence-cli.test.mjs && node tests/capabilities.test.mjs && node tests/mcp-fuzz.test.mjs && node tests/completeness-audit.test.mjs && node tests/rotation-drill.test.mjs && node tests/pursuit-lineage.test.mjs && node tests/record-delivery.test.mjs",
+    "tree": "node scripts/record-tree.mjs",
+    "pretest:backend": "node scripts/check-locale.mjs"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8.66.0",
+    "ajv": "^8.20.0",
+    "embedded-postgres": "17.5.0-beta.15",
+    "eslint": "^9.39.5",
+    "pg": "^8.13.0",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

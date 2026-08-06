@@ -1,0 +1,10 @@
+Copyright (c) 2026 ReqPub / Fathers.com. All rights reserved.
+
+This repository contains proprietary software. No license is granted to use,
+copy, modify, distribute, or create derivative works of this software, in
+whole or in part, without prior written permission from the copyright holder.
+
+Third-party components are used under their own licenses:
+- @supabase/supabase-js (MIT), loaded from CDN at runtime
+- Inter typeface (SIL Open Font License 1.1), served by Google Fonts
+- embedded-postgres and pg (MIT / PostgreSQL licenses), development and test only

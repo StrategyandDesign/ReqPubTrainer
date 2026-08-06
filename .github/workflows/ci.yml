@@ -1,0 +1,96 @@
+name: CI
+
+# Every gate that guards this repository runs here, in the order that fails
+# fastest: cheap static gates first, then the suites, then the gates that read
+# what the suites produced. A gate that only runs on someone's laptop is not a
+# gate, so all of them are here.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A superseded run is wasted minutes and a confusing red mark on an old commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Dependencies come first. This step used to sit near the end, after the
+      # suites and after the step that records what the suites prove, so on a
+      # clean runner both chains failed for want of node_modules, the recorder
+      # wrote 415 checks instead of 1,392, and the claims gate then failed the
+      # build over a mismatch it had been handed. Eight red builds, one
+      # ordering mistake.
+      - name: Install dependencies
+        run: npm ci
+
+      # ---- Static gates. Seconds each, and they catch the most drift. ----
+      - name: Static analysis (zero errors, no file-level disables)
+        run: npx eslint .
+      - name: Documentation structure gate (root allowlist, indexes, titles, links, frozen paths)
+        run: node tools/docs-gate.mjs --selftest && node tools/docs-gate.mjs
+      - name: Repository map is generated, not hand-maintained
+        run: node scripts/record-tree.mjs && git diff --exit-code README.md
+      - name: Symmetry audit (every handler has markup, every markup has a handler)
+        run: node tools/audit.mjs
+
+      - name: Capabilities gate (stamp parity, references, copy discipline)
+        run: node tools/capabilities-gate.mjs --selftest && node tools/capabilities-gate.mjs
+
+      - name: Copy gate (interface, site, and documents free of assembled prose)
+        run: node tools/copy-gate.mjs
+
+      - name: Design gate (contrast at AA, one measure for body text)
+        run: node tools/design-gate.mjs --selftest && node tools/design-gate.mjs
+
+      - name: Supply chain gate (no third-party script origin, vendored files pinned by hash)
+        run: node tools/supply-chain-gate.mjs --selftest && node tools/supply-chain-gate.mjs
+
+      - name: Specification and schema parity
+        run: node scripts/spec-schema-parity.mjs
+
+      - name: Independent verifier parity (the docs/VERIFY.md no-drift gate)
+        run: node tests/verify-cli.test.mjs
+
+      # ---- The suites. One step runs both chains once and records what they
+      # prove, so nothing is executed twice for the sake of a number, and a
+      # failing chain fails the build.
+      - name: Suites, and record what they prove
+        run: npm run counts
+
+      # ---- Gates that read what the suites produced. ----
+      - name: Claims gate (every published claim tied to an artifact, a test, and a real number)
+        run: node tools/claims-gate.mjs
+
+      # The figures, not the bytes. COUNTS.json carries the moment it was
+      # recorded, so a byte comparison would fail on every run for a reason
+      # that means nothing. This compares what the numbers say.
+      - name: The committed counts are the counts the suites produced
+        run: |
+          git show HEAD:tests/COUNTS.json > /tmp/committed-counts.json
+          node -e "
+            const a = require('/tmp/committed-counts.json');
+            const b = require('./tests/COUNTS.json');
+            const keys = ['unit', 'backend', 'total', 'unitSuites', 'backendSuites', 'testsHash'];
+            const drift = keys.filter((k) => a[k] !== b[k]);
+            if (drift.length) {
+              console.error('::error::committed counts disagree with this run on: ' + drift.join(', '));
+              for (const k of drift) console.error('  ' + k + ': committed ' + a[k] + ', produced ' + b[k]);
+              console.error(\"run 'npm run counts' and commit the result\");
+              process.exit(1);
+            }
+            console.log('committed counts match this run: ' + b.total + ' checks, suites hash ' + b.testsHash);
+          "
