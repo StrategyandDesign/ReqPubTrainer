@@ -1,6 +1,6 @@
 # Third-party code shipped to browsers
 
-Two files. Both are served from our own origin, both are pinned by hash, and
+Four files. All are served from our own origin, both are pinned by hash, and
 the content security policy on every page permits no third-party script
 origin. `tools/supply-chain-gate.mjs` fails the build if any of that stops
 being true.
@@ -8,6 +8,8 @@ being true.
 | File | Package | Version | SHA-384 (subresource integrity) | Vendored | Why |
 | --- | --- | --- | --- | --- | --- |
 | `supabase-js-2.112.1.min.js` | `@supabase/supabase-js` | 2.112.1 | `sha384-0x8XPoHt08aHZj+RHs8ojmhZ5IDsTLjPgblgWdriayWriqv9dic3Vkv1K2+UqgZV` | 2026-08-05 | This client holds the session and mediates every read and write. Loading it from a CDN at a floating major version meant a single malicious publish to the 2.x line would execute with full session authority against every customer at once |
+| `pdf-3.11.174.min.js` | `pdfjs-dist` | 3.11.174 | `sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e` | 2026-08-05 | Reads uploaded PDFs during intake. Loaded from a CDN until v3.0.1, when the tightened policy blocked it and PDF upload stopped working |
+| `mammoth-1.8.0.browser.min.js` | `mammoth` | 1.8.0 | `sha384-/cXAMbzovUIKbBERjPmR3SnPTh8siWr5lsvFYj1Uq4XP0yaJUZJmsh0YXyGv5P0y` | 2026-08-05 | Reads uploaded Word files during intake. Blocked by the same change |
 | `pdf.worker.min.js` | `pdfjs-dist` worker | see file header | `sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2` | earlier release | A cross-origin worker will not start, so this was always same-origin |
 
 ## The rule

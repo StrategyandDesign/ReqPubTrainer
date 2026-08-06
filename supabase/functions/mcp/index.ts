@@ -220,7 +220,7 @@ export async function handleRpc(msg, ctx) {
 // unit suite tests and what the paste ships.
 // ---------------------------------------------------------------------------
 if (typeof Deno !== "undefined" && Deno.serve) {
-  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.112.1");
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
   const rpc = async (fn, args) => {
     const { data, error } = await sb.rpc(fn, args);

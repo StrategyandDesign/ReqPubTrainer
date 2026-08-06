@@ -3,7 +3,7 @@
 // and core.js. Do not edit by hand: regenerate, the drift gate compares.
 
 // ---- inlined app/js/core.js (byte-verified against the app) ----
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.0.1';
 /* ReqPub v2 - core utilities: escaping, formatting, icons, theme, toast. */
 
 const esc = (s) => String(s == null ? '' : s)
@@ -342,7 +342,7 @@ function tsaGranted(replyBytes) {
 //
 // Deploy: supabase functions deploy seal-receipt --no-verify-jwt
 // Secrets: RECEIPT_SIGNING_KEY (PKCS8 base64, from scripts/generate-seal-keys.mjs)
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";

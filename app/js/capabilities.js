@@ -10,7 +10,7 @@
 
 import { esc, escA, APP_VERSION } from './core.js';
 
-export const COVERED_THROUGH = '3.0.0';
+export const COVERED_THROUGH = '3.0.1';
 
 export const TIER_LABELS = { plain: 'In plain sight', hood: 'Under the hood', work: 'Where it earns its keep' };
 export const TIER_ORDER = ['plain', 'hood', 'work'];

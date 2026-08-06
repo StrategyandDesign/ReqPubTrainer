@@ -181,7 +181,7 @@ export async function handleDelivery(deliveryId, deps) {
 if (typeof Deno !== "undefined" && Deno.serve) {
   // The dependency loads only under Deno, so Node can import this exact
   // file and test the shipped signing and SSRF logic directly.
-  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.112.1");
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
   const rpc = async (fn, args) => {
     const { data, error } = await sb.rpc(fn, args);

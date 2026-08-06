@@ -708,11 +708,12 @@ function val(id) { const el = document.getElementById(id); return el ? el.value 
    extracts text items WITH their coordinates and the geometry engine
    (pdfMarkdownFromItems) rebuilds each table deterministically from the
    recurring column positions, so requirements arrive as pipe tables the
-   mapper reads natively instead of shredded cell fragments. Both
-   libraries load once from the pinned CDN the CSP already allows; the
-   pdf.js worker is served from THIS origin (app/vendor/pdf.worker.min.js,
-   the same 3.11.174 build as the library) because the browser will not
-   start a cross-origin worker script. A parse failure degrades to a toast
+   mapper reads natively instead of shredded cell fragments. Both libraries
+   are vendored on THIS origin under app/vendor and pinned by hash, as is the
+   pdf.js worker, which must be the same 3.11.174 build as the library. They
+   were loaded from a CDN until v3.0.1, which stopped working the moment the
+   content security policy was tightened to script-src 'self': uploading a PDF
+   or a Word file failed with nothing in the interface to explain why. A parse failure degrades to a toast
    asking for pasted text - it never produces a silent partial plan. */
 let mammothLoading = null;
 function loadMammoth() {
@@ -720,7 +721,7 @@ function loadMammoth() {
   if (!mammothLoading) {
     mammothLoading = new Promise((res, rej) => {
       const sc = document.createElement('script');
-      sc.src = 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js';
+      sc.src = '/app/vendor/mammoth-1.8.0.browser.min.js';
       sc.onload = () => res(window.mammoth);
       sc.onerror = () => { mammothLoading = null; rej(new Error('mammoth load failed')); };
       document.head.appendChild(sc);
@@ -733,7 +734,7 @@ function loadPdfjs() {
   if (!pdfjsLoading) {
     pdfjsLoading = window.pdfjsLib ? Promise.resolve(window.pdfjsLib) : new Promise((res, rej) => {
       const sc = document.createElement('script');
-      sc.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+      sc.src = '/app/vendor/pdf-3.11.174.min.js';
       sc.onload = () => res(window.pdfjsLib);
       sc.onerror = () => { pdfjsLoading = null; rej(new Error('pdf.js load failed')); };
       document.head.appendChild(sc);

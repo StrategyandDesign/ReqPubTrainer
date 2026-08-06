@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.0.0';
+export const APP_VERSION = '3.0.1';
 /* ReqPub v2 - core utilities: escaping, formatting, icons, theme, toast. */
 
 export const esc = (s) => String(s == null ? '' : s)

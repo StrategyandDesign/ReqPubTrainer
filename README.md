@@ -89,5 +89,3 @@ The controls a security or procurement reviewer looks for:
 - A client baseline report whose cover carries a SHA-256 fingerprint of the exact baseline (recipe restated on the document); the fingerprint identifies the snapshot, and cryptographic sealing remains the e-signature phase.
 
 Also a command palette (⌘K), dark mode, and exports that carry status, approvals, and revision history. See `SECURITY.md` for the threat model and accepted residual risks, and `CHANGELOG.md` for release history.
-
-   

@@ -16,7 +16,7 @@
 //
 // Secrets: RESEND_API_KEY (required), INVITE_FROM, APP_URL (optional);
 // SUPABASE_URL and SUPABASE_ANON_KEY are provided automatically.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.1";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const INVITE_FROM = Deno.env.get("INVITE_FROM") ?? "ReqPub <onboarding@resend.dev>";

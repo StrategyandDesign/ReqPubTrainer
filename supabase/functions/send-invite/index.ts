@@ -16,7 +16,7 @@
 //   SUPABASE_URL, SUPABASE_ANON_KEY   (provided automatically)
 //
 // Keep "Verify JWT" ON when deploying, so only signed-in users can trigger emails.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.1";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const INVITE_FROM = Deno.env.get("INVITE_FROM") ?? "ReqPub <onboarding@resend.dev>";

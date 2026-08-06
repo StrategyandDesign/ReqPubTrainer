@@ -1,5 +1,32 @@
 # Changelog
 
+## 3.0.1
+
+Two supply chain defects, one of which broke a working feature.
+
+**PDF and Word upload stopped working.** `app/js/main.js` injected the pdf.js
+library and mammoth from a public CDN at runtime. v2.57.8 tightened the app
+page to `script-src 'self'` and removed that origin, which blocked both
+injections, so uploading a PDF or a Word file failed with nothing in the
+interface to explain why. The worker had been vendored long before; the
+libraries had not. Both are now vendored on our own origin at exactly the
+versions the code requested, pinned by hash, and the pdf.js worker already in
+`app/vendor` was confirmed byte-identical to the 3.11.174 build so the library
+and its worker match.
+
+**The edge functions imported an unpinned dependency.** All eight imported
+`@supabase/supabase-js@2` from esm.sh, a floating major version tag, in
+functions that hold the service role and seal receipts. A publish to that line
+would have executed with those credentials. Pinned to 2.112.1, the same version
+vendored for the browser.
+
+The gate that should have caught both read only static script tags in HTML. It
+now scans source for scripts injected at runtime, and requires every URL import
+to carry an exact version. Both rules were proven by reintroducing the defect.
+
+Deploy: push, then redeploy the eight edge functions so the pinned import takes
+effect. The database is unchanged.
+
 ## 3.0.0
 
 The release where the documentation, the migrations, and the published claims

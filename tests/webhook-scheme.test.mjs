@@ -101,8 +101,11 @@ check('a 5xx records a failed attempt with the status and snippet',
   failRun.body.ok === false && calls.find((c) => c[0] === 'webhook_delivery_result')[1].p_status === 503, failRun.body);
 
 /* ---- the dashboard paste gate ---- */
+/* The URL carries an exact version since v3.0.1. It was a floating major tag
+   in a function holding the service role, so this assertion now requires the
+   pin rather than merely requiring the import. */
 check('the function has no static imports at all: the paste is the file',
-  !/^import\s/m.test(src) && src.includes('await import("https://esm.sh/@supabase/supabase-js@2")'));
+  !/^import\s/m.test(src) && src.includes('await import("https://esm.sh/@supabase/supabase-js@2.112.1")'));
 check('the refused ranges are spelled in the shipped source',
   ['169.254', '172.16', '192.168', '100.64', 'fc', 'fe8'].every((m) => src.includes(m)));
 check('the serve tail answers the browser preflight (v2.50.1 regression pin)',

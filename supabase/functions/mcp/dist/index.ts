@@ -25,7 +25,7 @@
 // and pinned byte for byte by tests/mcp-scheme.test.mjs.
 
 // ---- inlined supabase/functions/mcp/core.js ----
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.0.1';
 /* ReqPub v2 - core utilities: escaping, formatting, icons, theme, toast. */
 
 const esc = (s) => String(s == null ? '' : s)
@@ -457,7 +457,7 @@ async function handleRpc(msg, ctx) {
 // unit suite tests and what the paste ships.
 // ---------------------------------------------------------------------------
 if (typeof Deno !== "undefined" && Deno.serve) {
-  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.112.1");
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
   const rpc = async (fn, args) => {
     const { data, error } = await sb.rpc(fn, args);

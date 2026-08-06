@@ -24,7 +24,7 @@
  * --selftest runs a violating fixture through the same checks and asserts
  * every class fires, so the gate cannot rot into a formality.
  */
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
@@ -99,7 +99,52 @@ if (process.argv.includes('--selftest')) {
   process.exit(0);
 }
 
+/* A script tag in HTML is not the only way a page loads code. app/js/main.js
+   set `script.src` to a CDN at runtime for the PDF and Word readers, and this
+   gate reported no third-party origin the whole time, because it only read
+   HTML. When the policy was tightened to script-src 'self' the injections were
+   blocked and file upload stopped working, with nothing in the interface to
+   say why. Source is scanned too now. */
+function checkSource() {
+  const v = [];
+  const dirs = ['app/js', 'supabase/functions', 'tools', 'scripts'];
+  const walk = (d, out = []) => {
+    if (!existsSync(join(ROOT, d))) return out;
+    for (const n of readdirSync(join(ROOT, d))) {
+      const rel = d + '/' + n;
+      if (statSync(join(ROOT, rel)).isDirectory()) walk(rel, out);
+      else if (/\.(js|mjs|ts)$/.test(n)) out.push(rel);
+    }
+    return out;
+  };
+  for (const dir of dirs) {
+    for (const f of walk(dir)) {
+      if (f.includes('/dist/')) continue;                 // generated from the sources above
+      const src = readFileSync(join(ROOT, f), 'utf8');
+      for (const m of src.matchAll(/\.src\s*=\s*['"`](https?:\/\/[^'"`]+)/g)) {
+        v.push(`ORIGIN    ${f} loads a script from another origin at runtime: ${m[1].slice(0, 70)}`);
+      }
+      /* A Deno edge function imports by URL; that is how the runtime works and
+         is not a defect. A URL without an exact version is: these two functions
+         hold the service role, and a floating major tag means a publish to that
+         line executes with those credentials. Pinned is the requirement, not
+         same-origin. */
+      for (const m of src.matchAll(/(?:from\s*|import\s*\(\s*)['"`](https?:\/\/[^'"`]+)['"`]/g)) {
+        const url = m[1];
+        const pinned = /@\d+\.\d+\.\d+(?:[-+][\w.]+)?(?:\/|$|\?)/.test(url) || /@\d+\.\d+\.\d+$/.test(url);
+        if (!pinned) v.push(`PIN       ${f} imports ${url.slice(0, 62)} without an exact version`);
+      }
+      if (!f.startsWith('app/js')) continue;
+      for (const m of src.matchAll(/import\s*\(\s*['"`](https?:\/\/[^'"`]+)/g)) {
+        v.push(`ORIGIN    ${f} imports from another origin at runtime: ${m[1].slice(0, 70)}`);
+      }
+    }
+  }
+  return v;
+}
+
 const violations = [];
+violations.push(...checkSource());
 const pages = servedPages();
 for (const f of pages) violations.push(...checkPage(f, read(f)));
 
@@ -120,4 +165,4 @@ if (violations.length) {
   process.exit(1);
 }
 console.log(`supply chain gate: ${pages.length} served pages, every one carrying a policy that permits no third-party script source; ` +
-  `every vendored file matches the hash recorded in VENDOR.md`);
+  `no source file loads a script from another origin at runtime; every vendored file matches the hash recorded in VENDOR.md`);

@@ -7,7 +7,7 @@
 //
 // Deploy: supabase functions deploy seal-receipt --no-verify-jwt
 // Secrets: RECEIPT_SIGNING_KEY (PKCS8 base64, from scripts/generate-seal-keys.mjs)
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.1";
 import { buildReceipt, canonicalHashOf, signReceiptHash, tsaRequestDer, tsaGranted } from "./seallib.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
