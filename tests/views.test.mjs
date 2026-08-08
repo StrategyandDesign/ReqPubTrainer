@@ -110,6 +110,20 @@ test('the intake preview button arms as the primary action the moment there is a
   assert.ok(pasted.includes('Preview mapping before applying'), 'pasted text arms it too');
 });
 
+test('an unplaced section offers every shape as a home and states the rows-target yield honestly', () => {
+  const base = { pid: 'p1', role: 'manager', viewSeq: null, answers: {}, versions: [] };
+  const plan = { placements: [], unplaced: [
+    { title: 'Mystery table', body: '- The system must sync nightly. Acceptance: by 06:00.', source: 'p.md' },
+    { title: 'Mystery prose', body: 'Nothing extractable lives here.', source: 'p.md' },
+  ] };
+  const html = intakeZone({ ...base, intake: { open: true, text: '', files: [], plan, include: [], targets: ['fr', 'metrics'] } });
+  assert.ok(html.includes('Append to a prose answer') && html.includes('Add rows to a table or list'), 'both optgroups render');
+  assert.ok(html.includes('Add rows to Functional requirements'), 'tables are routable homes');
+  assert.ok(html.includes('Append to Safeguarding response'), 'every dropdown label is also a label the classifier hears');
+  assert.ok(html.includes('1 row lands on apply'), 'the routed yield is counted before anything writes');
+  assert.ok(html.includes('Nothing lands: no bullets or table found here'), 'a zero yield is said, not hidden');
+});
+
 test('the creation row offers Documents, firm templates with their reviewed date, and a clone picker', () => {
   const html = viewProjects({ ...dashBase(), newTpl: 'documents',
     recordTemplates: [{ id: 't1', name: 'Standard engagement', reviewed_at: '2026-07-01T00:00:00Z' }],

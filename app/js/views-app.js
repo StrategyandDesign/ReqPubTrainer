@@ -7,6 +7,7 @@ import { esc, escA, ico, IC, brandmark, initials, relTime, themeGet, APP_VERSION
 import { helpBeaconHTML, helpPanelHTML, helpSpotHTML, helpStudioHTML } from './help.js';
 import { Q, SECTIONS, qBySec, visQL, lensHasSec, PHASES, currentPhase, isAnswered, assembleAnswers, buildSections, assemble, mdToHtml, reqDiff, reqDiffDetail, BRIEF_SECTIONS, docSecNum, docSecTitle, isPursuit, pursuitSection } from './domain.js';
 import { healthSignals, healthPillLabel } from './health.js';
+import { intakeKind, routeUnplaced } from './intake.js';
 import { renderTab, newReplyCount } from './views-collab.js';
 import { execSummaryHTML } from './exports.js';
 import { TEMPLATES } from './templates.js';
@@ -696,7 +697,12 @@ export function currentDocMd(APP, a) {
    app/js/intake.js) before a single write happens, and hands control back
    the moment it lands. Intake never overwrites a non-empty field. */
 const INTAKE_QLABEL = {}; Q.forEach((q) => { INTAKE_QLABEL[q.id] = q.prompt; });
-const INTAKE_LONGS = Q.filter((q) => q.type === 'long').map((q) => [q.id, q.prompt]);
+/* Every intake-shaped question is a routing home for unrecognized sections:
+   prose fields append, tables and lists land rows through the same
+   deterministic extractors the classifier uses. Derived from the bank, in
+   worksheet order, so the dropdown and the classifier share one vocabulary. */
+const INTAKE_PROSE = Q.filter((q) => ['long', 'short'].includes(intakeKind(q.id))).map((q) => [q.id, q.prompt]);
+const INTAKE_TABLES = Q.filter((q) => ['rows', 'list'].includes(intakeKind(q.id))).map((q) => [q.id, q.prompt]);
 
 export function intakeMeaningful(APP) {
   const skip = (id) => id.startsWith('ctrl_') || id.startsWith('link_');
@@ -723,8 +729,9 @@ export function intakeZone(APP) {
   let planHtml = '';
   if (it.plan) {
     const rows = it.plan.placements.map((p, i) => {
-      const count = p.kind === 'long' ? (p.value.length + ' chars') : (p.rows.length + (p.kind === 'list' ? ' items' : ' rows'));
-      const peek = p.kind === 'long' ? p.value : (p.rows[0] ? Object.values(p.rows[0]).filter(Boolean).join(' · ') : '');
+      const prose = p.kind === 'long' || p.kind === 'short';
+      const count = prose ? (p.value.length + ' chars') : (p.rows.length + (p.kind === 'list' ? ' items' : ' rows'));
+      const peek = prose ? p.value : (p.rows[0] ? Object.values(p.rows[0]).filter(Boolean).join(' · ') : '');
       return '<label style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);cursor:pointer">' +
         '<input type="checkbox" data-intaketog="' + i + '"' + (it.include[i] ? ' checked' : '') + ' style="margin-top:3px">' +
         '<span style="flex:1;min-width:0"><strong style="font-size:13px">' + esc(INTAKE_QLABEL[p.qid] || p.qid) + '</strong>' +
@@ -732,13 +739,26 @@ export function intakeZone(APP) {
         '<span style="display:block;font-size:11.5px;color:var(--ink-4);margin-top:2px">' + esc(String(peek).slice(0, 110)) + (String(peek).length > 110 ? '\u2026' : '') +
         ' <span style="color:var(--ink-4)">· from ' + esc(p.sources.join(', ')) + '</span></span></span></label>';
     }).join('');
-    const un = it.plan.unplaced.map((u, i) =>
-      '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)">' +
-      '<span style="flex:1;min-width:0"><strong style="font-size:13px">' + esc(u.title) + '</strong>' +
-      '<span style="display:block;font-size:11.5px;color:var(--ink-4);margin-top:2px">' + esc(u.body.slice(0, 110)) + (u.body.length > 110 ? '\u2026' : '') + ' <span>· from ' + esc(u.source) + '</span></span></span>' +
-      '<select class="input" data-intaketgt="' + i + '" style="height:30px;font-size:12px;width:auto;max-width:220px">' +
-      '<option value="">Skip</option>' + INTAKE_LONGS.map(([id, l]) => '<option value="' + escA(id) + '"' + (it.targets[i] === id ? ' selected' : '') + '>Append to ' + esc(l) + '</option>').join('') +
-      '</select></div>').join('');
+    const un = it.plan.unplaced.map((u, i) => {
+      const opt = ([id, l], verb) => '<option value="' + escA(id) + '"' + (it.targets[i] === id ? ' selected' : '') + '>' + verb + ' ' + esc(l) + '</option>';
+      // A rows or list home shows its deterministic yield the moment it is
+      // chosen: what lands, or the honest zero, before anything is written.
+      const tgt = it.targets[i];
+      let hint = '';
+      if (tgt && (intakeKind(tgt) === 'rows' || intakeKind(tgt) === 'list')) {
+        const nr = (routeUnplaced(tgt, u.body, u.source) || { rows: [] }).rows.length;
+        hint = '<span style="display:block;font-size:10.5px;margin-top:3px;text-align:right;color:' + (nr ? 'var(--ink-4)' : 'var(--amber)') + '">' +
+          (nr ? nr + (nr === 1 ? ' row lands on apply' : ' rows land on apply') : 'Nothing lands: no bullets or table found here') + '</span>';
+      }
+      return '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)">' +
+        '<span style="flex:1;min-width:0"><strong style="font-size:13px">' + esc(u.title) + '</strong>' +
+        '<span style="display:block;font-size:11.5px;color:var(--ink-4);margin-top:2px">' + esc(u.body.slice(0, 110)) + (u.body.length > 110 ? '\u2026' : '') + ' <span>· from ' + esc(u.source) + '</span></span></span>' +
+        '<span style="min-width:0"><select class="input" data-intaketgt="' + i + '" style="height:30px;font-size:12px;width:auto;max-width:230px">' +
+        '<option value="">Skip</option>' +
+        '<optgroup label="Append to a prose answer">' + INTAKE_PROSE.map((x) => opt(x, 'Append to')).join('') + '</optgroup>' +
+        '<optgroup label="Add rows to a table or list">' + INTAKE_TABLES.map((x) => opt(x, 'Add rows to')).join('') + '</optgroup>' +
+        '</select>' + hint + '</span></div>';
+    }).join('');
     planHtml =
       '<div style="margin-top:14px"><div class="eyebrow" style="font-size:9.5px;margin-bottom:2px">Mapped. Untick anything that should not land</div>' + (rows || '<div style="font-size:12.5px;color:var(--ink-3);padding:8px 0">No recognized sections yet.</div>') + '</div>' +
       (un ? '<div style="margin-top:14px"><div class="eyebrow" style="font-size:9.5px;margin-bottom:2px">Not recognized. Choose a home or skip</div>' + un + '</div>' : '') +

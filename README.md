@@ -19,7 +19,7 @@ history is archived in [docs/changelog/v2.md](docs/changelog/v2.md).
 ## Quick start
 
 ```bash
-npm test                      # 564 checks across 37 suites, node only, no install needed
+npm test                      # 575 checks across 37 suites, node only, no install needed
 npm ci && npm run test:backend # 841 checks across 35 suites on an embedded Postgres
 npm run ci                    # every gate
 ```

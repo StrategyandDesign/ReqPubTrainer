@@ -1,5 +1,41 @@
 # Changelog
 
+## Unreleased
+
+Intake heard keywords but not the record's own vocabulary. A program document
+written in the record's OWN section labels came back with seven headings
+unrecognized, and two of them silently misfiled: Safeguarding response landed
+as non-functional requirement rows and Release-specific acceptance notes
+landed as stage gates, both ticked by default in the preview.
+
+**Every question label now classifies to its own question.** Classification
+gained an exact-label tier derived from the question bank itself, so the
+vocabulary the manual dropdown offers is exactly the vocabulary the classifier
+hears, and a question rename stays recognized without touching the keyword
+map. The colliding keywords were retuned: safeguarding content is never a
+generic quality attribute, "Purpose and audience" is purpose rather than a
+personas grab, OKRs are delivery rows rather than overview goals, and consent
+has its own home. A bare "Risks" heading still stays unplaced. Doctrine is now
+executable: a test walks every intake-shaped prompt in the bank and fails the
+build if any classifies to a different question.
+
+**Unrecognized sections can now land anywhere content lands.** The "Not
+recognized. Choose a home or skip" dropdown offered twelve prose fields and
+nothing else, so a mislabeled requirements table could not reach the
+requirements table. Every intake-shaped question is now a routing home: prose
+homes append exactly as before, and table or list homes run the same
+deterministic extractors the classifier uses, with the yield counted next to
+the dropdown before anything is written, including the honest zero. Risks and
+issues rows allocate their permanent phase-prefixed IDs through the same RPC
+as the worksheet's add button; a row that cannot get its ID does not land.
+
+New landing shapes: User segments, Release plan, Objectives and key results,
+Risks and issues, People and roles, and the data-section prose answers
+(Operating context, Safeguarding response, Consent approach, Retention and
+deletion, Data residency, Access control). Eleven new unit checks pin all of
+it. The database is unchanged: the same save_field and upsert_row paths carry
+every write.
+
 ## 3.0.1
 
 Two supply chain defects, one of which broke a working feature.

@@ -7,8 +7,9 @@
    a product doc drafted in a chat assistant, pasted or uploaded as-is. */
 import assert from 'node:assert/strict';
 import {
-  segmentText, classifySegment, intakeKind, bulletItems, mdTableIn, splitPair, extractRows, mapArtifacts, applyPlan, executeOps, pdfTextFromItems, mdUnescape, pdfMarkdownFromItems, mdTablesAll, inferColumns, htmlToIntakeMd, pdfEmptyDiagnosis, pasteToRows
+  segmentText, classifySegment, intakeKind, bulletItems, mdTableIn, splitPair, extractRows, mapArtifacts, applyPlan, executeOps, pdfTextFromItems, mdUnescape, pdfMarkdownFromItems, mdTablesAll, inferColumns, htmlToIntakeMd, pdfEmptyDiagnosis, pasteToRows, routeUnplaced
 } from '../app/js/intake.js';
+import { Q } from '../app/js/domain.js';
 
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('  ✓ ' + name); };
@@ -505,6 +506,109 @@ test('bulk paste: input larger than the cap is truncated, never a hang', () => {
   const big = ('The system shall process the nightly batch without loss.\tVerified by the replay test.\n').repeat(20000);
   const rows = pasteToRows('fr', big);
   assert.ok(rows.length > 0 && rows.length < 20000);
+});
+
+/* ---- the record's own vocabulary ----
+   A real client program document written in the record's OWN section labels
+   came back with seven headings unrecognized and, worse, two silently misfiled:
+   Safeguarding response landed as NFR rows and Release-specific acceptance
+   notes landed as stage gates, both ticked by default in the preview. The
+   doctrine is executable: every label the manual dropdown offers is a label
+   the classifier hears, and a keyword may never route a section to a
+   different question than the one wearing that exact label. */
+test('doctrine: every intake-shaped question prompt classifies to itself, never another home', () => {
+  for (const q of Q) {
+    if (q.sec === 'control' || q.retired || !['long', 'short', 'list', 'rows'].includes(q.type)) continue;
+    assert.equal(classifySegment(q.prompt), q.id, '"' + q.prompt + '"');
+  }
+});
+test('the five labels that failed in the field now land on their own questions', () => {
+  assert.equal(classifySegment('Operating context'), 'context');
+  assert.equal(classifySegment('Safeguarding response'), 'safeguard');
+  assert.equal(classifySegment('Retention and deletion'), 'retention');
+  assert.equal(classifySegment('Access control'), 'access');
+  assert.equal(classifySegment('Release-specific acceptance notes'), 'verify_note');
+});
+test('the misfile keywords are tamed: safeguarding is not an NFR, audience is not a persona heading grab', () => {
+  assert.equal(classifySegment('Safeguarding'), 'safeguard');
+  assert.equal(classifySegment('Purpose and audience of this document'), 'ov_purpose');
+  assert.equal(classifySegment('Audience'), 'persona', 'a bare Audience heading still means personas');
+  assert.equal(classifySegment('Consent approach'), 'consent');
+  assert.equal(classifySegment('OKRs'), 'okrs');
+  assert.equal(classifySegment('Objectives and key results'), 'okrs');
+  assert.equal(classifySegment('Goals and objectives'), 'ov_goals');
+  assert.equal(classifySegment('Risks and issues'), 'updates');
+  assert.equal(classifySegment('Risks'), null, 'a bare Risks heading still stays unplaced');
+  assert.equal(classifySegment('Releases'), 'gates', 'the numbered-release heading keeps its home');
+  assert.equal(classifySegment('Release plan'), 'release');
+});
+test('a safeguarding section with bullets lands whole in Safeguarding response, and NFR gets nothing', () => {
+  const doc2 = '# Safeguarding response\n- Risk responses escalate to the duty clinician within 4 hours\n- Crisis resources are shown on trigger\n\n# Release-specific acceptance notes\nR1 accepts with the signed known-issue list.';
+  const { placements, unplaced } = mapArtifacts([{ name: 'program.md', text: doc2 }]);
+  const by = Object.fromEntries(placements.map((p) => [p.qid, p]));
+  assert.ok(by.safeguard && by.safeguard.kind === 'long' && by.safeguard.value.includes('duty clinician'));
+  assert.ok(by.verify_note && by.verify_note.value.includes('known-issue list'));
+  assert.ok(!by.nfr, 'nothing leaked into non-functional requirements');
+  assert.ok(!by.gates, 'nothing leaked into stage gates');
+  assert.equal(unplaced.length, 0);
+});
+test('a short-shaped section (Data residency) lands as a field value', () => {
+  const { placements } = mapArtifacts([{ name: 'p.md', text: '# Data residency\nEU-hosted; no cross-border processing.' }]);
+  const p = placements.find((x) => x.qid === 'residency');
+  assert.ok(p && p.kind === 'short' && p.value.includes('EU-hosted'));
+  const { ops } = applyPlan(placements, {});
+  assert.ok(ops.some((o) => o.kind === 'field' && o.qid === 'residency'), 'short fields write like long ones');
+});
+test('User segments, People and roles, and a Release plan table land as their own rows', () => {
+  const doc2 = [
+    '# User segments',
+    '| Segment | Share | Description |', '| --- | --- | --- |',
+    '| New fathers | 60% | First program exposure |',
+    '# People and roles',
+    '- Dana Reyes: Engagement lead',
+    '# Release plan',
+    '| Release | Objective | MVP date | Release date |', '| --- | --- | --- | --- |',
+    '| V1 Foundational | Core intake | 2026-10 | 2026-12 |',
+  ].join('\n');
+  const { placements } = mapArtifacts([{ name: 'p.md', text: doc2 }]);
+  const by = Object.fromEntries(placements.map((p) => [p.qid, p]));
+  assert.deepEqual(by.seg.rows[0], { segment: 'New fathers', share: '60%', desc: 'First program exposure' });
+  assert.deepEqual(by.people.rows[0], { name: 'Dana Reyes', role: 'Engagement lead' });
+  assert.equal(by.release.rows[0].rel, 'V1 Foundational');
+  assert.equal(by.release.rows[0].ship, '2026-12');
+});
+test('an OKR table lands as key-result rows with Done normalized', () => {
+  const body = '| Objective | Key result | Done |\n| --- | --- | --- |\n| Cut close to 5 days | Close time measured at 5 days | Done |\n| Cut close to 5 days | Variance under $500 | Open |';
+  const rows = extractRows('okrs', body, 'p.md');
+  assert.equal(rows.length, 2);
+  assert.deepEqual(rows[0], { objective: 'Cut close to 5 days', kr: 'Close time measured at 5 days', done: 'Done', phase: '' });
+  assert.equal(rows[1].done, 'Open');
+});
+test('Risks and issues bullets carry their type prefix and default to Open', () => {
+  const rows = extractRows('updates', '- Risk: Source data access - not yet granted by IT\n- Issue: Sponsor calendar - reviews slipping weekly\n- Formats drift without notice', 'p.md');
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows[0], { type: 'Risk', title: 'Source data access', desc: 'not yet granted by IT', status: 'Open' });
+  assert.equal(rows[1].type, 'Issue');
+  assert.deepEqual(rows[2], { type: '', title: '', desc: 'Formats drift without notice', status: 'Open' });
+});
+
+/* ---- routing an unplaced section by hand: every shape is a valid home ---- */
+test('routeUnplaced appends prose homes verbatim and extracts rows homes deterministically', () => {
+  const prose = routeUnplaced('ov_problem', 'Close runs late.\n\nEvery month.', 'x.md');
+  assert.deepEqual(prose, { kind: 'long', value: 'Close runs late.\n\nEvery month.', rows: [] });
+  const rows = routeUnplaced('fr', '- The system must sync nightly. Acceptance: done by 06:00.', 'x.md');
+  assert.equal(rows.kind, 'rows');
+  assert.equal(rows.rows.length, 1);
+  assert.equal(rows.rows[0].fit, 'done by 06:00.');
+  assert.equal(rows.rows[0].src, 'Import · x.md', 'routed rows carry provenance like classified ones');
+  const list = routeUnplaced('assume', '- Partners deliver nightly', 'x.md');
+  assert.deepEqual(list.rows, [{ text: 'Partners deliver nightly' }]);
+});
+test('routeUnplaced is honest about a zero yield and refuses non-targets', () => {
+  const zero = routeUnplaced('fr', 'Intro prose with neither bullets nor a table.', 'x.md');
+  assert.equal(zero.rows.length, 0, 'no junk row from intro prose');
+  assert.equal(routeUnplaced('ctrl_product', 'text', 'x.md'), null, 'control questions are never homes');
+  assert.equal(routeUnplaced('nope', 'text', 'x.md'), null);
 });
 
 console.log(`intake.test: ${n}/${n} passed`);

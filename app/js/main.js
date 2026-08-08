@@ -9,7 +9,7 @@ import { sb, online, repo, buildSharePayload, sb as sbClient } from './data.js';
 import { sync } from './sync.js';
 import { viewProjects, viewWorkspace, currentDocMd, nextLabel, paletteItems, documentTabHTML, docShotsOf } from './views-app.js';
 import { projectStatsOf } from './views-collab.js';
-import { mapArtifacts, applyPlan, executeOps, pdfMarkdownFromItems, htmlToIntakeMd, pdfEmptyDiagnosis, pasteToRows } from './intake.js';
+import { mapArtifacts, applyPlan, executeOps, pdfMarkdownFromItems, htmlToIntakeMd, pdfEmptyDiagnosis, pasteToRows, routeUnplaced } from './intake.js';
 import { assembleUpdate } from './update.js';
 import { positionHelpSpot, textToSteps, stepsToText, seedPlan } from './help.js';
 import { HELP_LIBRARY } from './help-library.js';
@@ -1903,28 +1903,53 @@ async function handleAction(a, id, t, e) {
       const sel = it.plan.placements.filter((p, i) => it.include[i]);
       const a = assembleAnswers(APP.fields, APP.rows);
       const { ops, kept } = applyPlan(sel, a);
-      // Unplaced items the user assigned: append to the chosen long field,
-      // chaining when several land in the same target - appending, never
-      // replacing, so the never-overwrite rule holds here too.
+      // Unplaced items the user assigned. A prose home appends to the chosen
+      // field, chaining when several land in the same target - appending,
+      // never replacing, so the never-overwrite rule holds here too. A rows
+      // or list home lands through the same deterministic extractors the
+      // classifier uses; a section that yields nothing is skipped and said.
       const acc = {};
+      let skippedRouted = 0;
       it.plan.unplaced.forEach((u, i) => {
         const tgt = it.targets[i]; if (!tgt) return;
-        const base = acc[tgt] != null ? acc[tgt] : String(a[tgt] || '').trim();
-        acc[tgt] = base ? base + '\n\n' + u.body : u.body;
+        const routed = routeUnplaced(tgt, u.body, u.source);
+        if (!routed) return;
+        if (routed.kind === 'long' || routed.kind === 'short') {
+          const base = acc[tgt] != null ? acc[tgt] : String(a[tgt] || '').trim();
+          acc[tgt] = base ? base + '\n\n' + routed.value : routed.value;
+        } else if (routed.rows.length) {
+          for (const r of routed.rows) ops.push({ kind: 'row', qid: tgt, data: r });
+        } else skippedRouted++;
       });
       Object.entries(acc).forEach(([qid, value]) => ops.push({ kind: 'field', qid, value }));
       ops.forEach((op) => { if (op.kind === 'field') op.baseRev = (APP.fields[op.qid] && APP.fields[op.qid].rev) || 0; });
       if (!ops.length) {
-        toast(kept.length ? 'Nothing to apply. The matched fields already have content, which intake never overwrites' : 'Nothing selected to apply');
+        toast(kept.length ? 'Nothing to apply. The matched fields already have content, which intake never overwrites'
+          : skippedRouted ? 'Nothing to apply. The routed sections had no bullets or tables to land' : 'Nothing selected to apply');
         break;
       }
       it.busy = true; it.done = 0; it.total = ops.length; render();
-      const out = await executeOps(repo, APP.pid, ops, (d) => { it.done = d; render(); });
+      // Risks and issues rows carry a permanent phase-prefixed ID allocated
+      // server-side, exactly like the worksheet's own add button. A row that
+      // cannot get its ID does not land: the numbering promise outranks it.
+      const uidFail = [];
+      for (const op of ops) {
+        if (op.kind === 'row' && op.qid === 'updates' && !op.data._uid) {
+          const r = await repo.updatesNextId(APP.pid, phaseLetter(a));
+          if (r && r.data && r.data.ok && r.data.id) op.data = { ...op.data, _uid: r.data.id };
+          else uidFail.push(op);
+        }
+      }
+      const opsFinal = uidFail.length ? ops.filter((op) => !uidFail.includes(op)) : ops;
+      it.total = opsFinal.length;
+      const out = await executeOps(repo, APP.pid, opsFinal, (d) => { it.done = d; render(); });
+      out.failed += uidFail.length;
       const parts = [];
       if (out.fields) parts.push(out.fields + (out.fields === 1 ? ' answer' : ' answers'));
       if (out.rows) parts.push(out.rows + (out.rows === 1 ? ' row' : ' rows'));
       let msg = 'Populated ' + (parts.join(' and ') || 'nothing');
       if (kept.length) msg += ' · kept ' + kept.length + ' existing answer' + (kept.length === 1 ? '' : 's') + ' untouched';
+      if (skippedRouted) msg += ' · ' + skippedRouted + ' routed section' + (skippedRouted === 1 ? '' : 's') + ' had nothing to land';
       if (out.failed) msg += ' · ' + out.failed + ' write' + (out.failed === 1 ? '' : 's') + ' failed';
       toast(msg);
       await openProject(APP.pid, 'document');
@@ -2745,7 +2770,8 @@ document.addEventListener('change', async (e) => {
   } else if (t.matches('[data-intaketog]')) {
     if (APP.intake && APP.intake.plan) APP.intake.include[+t.dataset.intaketog] = t.checked;
   } else if (t.matches('[data-intaketgt]')) {
-    if (APP.intake) APP.intake.targets[+t.dataset.intaketgt] = t.value;
+    // Re-render so a rows or list home shows its yield count immediately.
+    if (APP.intake) { APP.intake.targets[+t.dataset.intaketgt] = t.value; render(); }
   } else if (t.matches('[data-action="versionsel"]')) {
     APP.viewSeq = t.value === '' ? null : +t.value;
     if (APP.viewSeq != null) await ensureSnapshot(APP.viewSeq);

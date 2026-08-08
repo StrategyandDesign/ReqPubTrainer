@@ -11,6 +11,7 @@
    Requirements rows carry src = 'Import · <source>' so provenance renders
    exactly like discovery promotion. Unrecognized sections are never guessed:
    they go to an "unplaced" bucket the user assigns by hand or skips. */
+import { Q } from './domain.js';
 
 /* ---------------- segmentation ---------------- */
 /* Split raw text into titled segments. Recognized heading forms: markdown
@@ -63,53 +64,84 @@ export function segmentText(text, source) {
 }
 
 /* ---------------- classification ---------------- */
-/* Heading keywords → question ids, first match wins. The map is deliberately
-   conservative: only targets whose shape we can land faithfully. Anything
-   else stays unplaced and the user decides. */
+/* Two tiers, both deterministic. Tier one: a heading that IS one of the
+   record's own question labels lands on that question, exactly - the label
+   the manual dropdown offers is a label the classifier hears, always, and a
+   question rename stays recognized because the vocabulary is derived from
+   the question bank itself. Tier two: heading keywords → question ids, first
+   match wins. The keyword map is deliberately conservative: only targets
+   whose shape we can land faithfully. Anything else stays unplaced and the
+   user decides. Unplaced beats misplaced, so a keyword may never route a
+   section to a DIFFERENT question than the one wearing that exact label. */
 const MAP = [
   [/\b(out of scope|non-?goals?|exclusions?|will not|won'?t)\b/, 'sol_out'],
   [/\b(in scope|scope)\b/, 'sol_in'],
-  [/\b(non-?functional|nfrs?|quality attributes?|privacy|safeguarding)\b/, 'nfr'],
+  // Safeguarding is its own home, never a generic quality attribute: this
+  // content needs clinical and policy review, and burying it in the NFR
+  // table as "to confirm" rows is the misfile that hurt most in the field.
+  [/\b(safeguard(ing)?)\b/, 'safeguard'],
+  [/\b(non-?functional|nfrs?|quality attributes?|privacy)\b/, 'nfr'],
   [/\b(functional requirements?|features?|user stories)\b/, 'fr'],
   [/\b(acceptance criteria|evaluation criteria|eval(uation)?s?|thresholds?)\b/, 'eval'],
   [/\b(golden (data)?set)\b/, 'golden'],
   [/\b(success metrics?|metrics?|kpis?)\b/, 'metrics'],
-  [/\b(goals?|objectives?|okrs?)\b/, 'ov_goals'],
+  // OKRs are phase-scoped delivery rows, not overview goals; the goals
+  // keyword no longer swallows them.
+  [/\b(okrs?|key results?)\b/, 'okrs'],
+  [/\b(goals?|objectives?)\b/, 'ov_goals'],
+  [/\b(user segments?|segmentation)\b/, 'seg'],
+  // "Purpose and audience ..." is purpose; before this entry ran first, the
+  // audience keyword handed the record's own opening section to Personas.
+  [/\b(purpose)\b/, 'ov_purpose'],
   [/\b(personas?|target users?|users|audience)\b/, 'persona'],
   [/\b(problem|pain points?|challenge)\b/, 'ov_problem'],
   [/\b(vision)\b/, 'ov_vision'],
   [/\b(market|competitive landscape|competitors?)\b/, 'ov_market'],
-  [/\b(purpose|overview|summary|abstract|introduction|background)\b/, 'ov_purpose'],
+  [/\b(overview|summary|abstract|introduction|background)\b/, 'ov_purpose'],
+  [/\b(consent)\b/, 'consent'],
   [/\b(solution|approach|how it works)\b/, 'sol_solution'],
   [/\b(components?|modules?|architecture)\b/, 'components'],
   [/\b(assumptions?)\b/, 'assume'],
   [/\b(dependenc(y|ies))\b/, 'depend'],
   [/\b(constraints?|limitations?)\b/, 'constrain'],
+  [/\b(release plan)\b/, 'release'],
   [/\b(gates?|milestones?|phases?|releases?|timeline)\b/, 'gates'],
   [/\b(decisions?)\b/, 'decisions'],
   [/\b(interfaces?|integrations?|apis?)\b/, 'interfaces'],
   [/\b(data (entities|model)|entities)\b/, 'data_entities'],
+  [/\b(data residency|residency)\b/, 'residency'],
+  [/\b(retention|deletion)\b/, 'retention'],
+  [/\b(access control)\b/, 'access'],
+  [/\b(operating (context|environment)|context of use)\b/, 'context'],
+  // "Risks and issues" lands in the live risks home. A bare "Risks" heading
+  // still stays unplaced: too many documents use it for content that is not
+  // a delivery row, and unplaced beats misplaced.
+  [/\b(risks? (and|&) issues?)\b/, 'updates'],
+  [/\b(people and roles|roles and responsibilities|project team)\b/, 'people'],
   [/\b(glossary|terminology|definitions?|people and words)\b/, 'glossary'],
   [/\b(never build|prohibitions?)\b/, 'constrain'],
   [/\b(open items?|open questions?)\b/, 'decisions'],
   [/\b(verification|testing approach|test strategy)\b/, 'verify_note'],
 ];
+/* What shape each recognized target takes when it lands: the question's own
+   type, derived from the bank so it cannot drift. Control questions, choice
+   questions, and retired questions are never intake targets. */
+const KIND = {};
+for (const q of Q) {
+  if (q.sec === 'control' || q.retired) continue;
+  if (q.type === 'long' || q.type === 'short' || q.type === 'list' || q.type === 'rows') KIND[q.id] = q.type;
+}
+export const intakeKind = (qid) => KIND[qid] || null;
+const normLabel = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').replace(/\s*[.:]\s*$/, '').trim();
+const LABEL2QID = {};
+for (const q of Q) if (KIND[q.id]) LABEL2QID[normLabel(q.prompt)] = q.id;
 export function classifySegment(title) {
-  const t = String(title || '').toLowerCase();
+  const t = normLabel(title);
   if (!t) return null;
+  if (LABEL2QID[t]) return LABEL2QID[t];
   for (const [rx, qid] of MAP) if (rx.test(t)) return qid;
   return null;
 }
-
-/* What shape each recognized target takes when it lands. */
-const KIND = {
-  ov_purpose: 'long', ov_problem: 'long', ov_vision: 'long', ov_market: 'long',
-  sol_solution: 'long', golden: 'long', verify_note: 'long',
-  ov_goals: 'list', sol_in: 'list', sol_out: 'list', assume: 'list', depend: 'list', constrain: 'list',
-  fr: 'rows', nfr: 'rows', eval: 'rows', metrics: 'rows', persona: 'rows',
-  components: 'rows', gates: 'rows', interfaces: 'rows', data_entities: 'rows', glossary: 'rows', decisions: 'rows',
-};
-export const intakeKind = (qid) => KIND[qid] || null;
 
 /* ---------------- record-form documents (FC-PRD-001 dialect) ----------- */
 /* Running footers, page stamps, and form feeds from a shredded PDF, plus
@@ -635,6 +667,79 @@ export function extractRows(qid, body, source) {
       }
       return fallback.map((tx) => { const p = splitPair(tx); return { persona: p.head, needs: p.rest }; });
     }
+    case 'seg': {
+      if (tables.length) {
+        const rows = fromTables((t, r) => {
+          const segment = pick(t.headers, r, ['segment', 'name']) || String(r[0] || '');
+          if (!String(segment).trim()) return null;
+          return { segment: segment.trim(), share: String(pick(t.headers, r, ['share', 'priority', 'size']) || r[1] || '').trim(),
+                   desc: String(pick(t.headers, r, ['description', 'desc']) || r[2] || '').trim() };
+        });
+        if (rows.length) return rows;
+      }
+      return fallback.map((tx) => { const p = splitPair(tx); return { segment: p.head, share: '', desc: p.rest }; });
+    }
+    case 'people': {
+      if (tables.length) {
+        const rows = fromTables((t, r) => {
+          const name = pick(t.headers, r, ['name', 'person', 'who']) || String(r[0] || '');
+          const role = pick(t.headers, r, ['role', 'title', 'responsibilit']) || String(r[1] || '');
+          return String(name).trim() ? { name: name.trim(), role: String(role || '').trim() } : null;
+        });
+        if (rows.length) return rows;
+      }
+      return fallback.map((tx) => { const p = splitPair(tx); return { name: p.head, role: p.rest }; });
+    }
+    case 'release': {
+      if (tables.length) {
+        const rows = fromTables((t, r, id, inf) => {
+          // 'Release' doubles as the row's own name (idColIndex claims it),
+          // so the id-echo guard and the id prefix both stand down here.
+          const rel = pick(t.headers, r, ['release', 'version', 'name']) || (inf.stmtc >= 0 ? r[inf.stmtc] : '') || String(r[0] || '');
+          if (!String(rel || '').trim()) return null;
+          return { rel: String(rel).trim(), obj: pick(t.headers, r, ['objective', 'delivers', 'description', 'goal']) || (inf.fitc >= 0 ? r[inf.fitc] : ''),
+                   mvp: pick(t.headers, r, ['mvp']), ship: pick(t.headers, r, ['release date', 'ship', 'launch', 'date']) };
+        });
+        if (rows.length) return rows;
+      }
+      return fallback.map((tx) => { const p = splitPair(tx); return { rel: p.head, obj: p.rest, mvp: '', ship: '' }; });
+    }
+    case 'okrs': {
+      if (tables.length) {
+        const rows = fromTables((t, r, id, inf) => {
+          const objective = pick(t.headers, r, ['objective', 'goal']) || (inf.stmtc >= 0 ? r[inf.stmtc] : '');
+          if (!String(objective || '').trim() || String(objective).trim() === id) return null;
+          const done = String(pick(t.headers, r, ['done', 'status']) || '').trim();
+          return { objective: withId(id, objective),
+                   kr: String(pick(t.headers, r, ['key result', 'kr', 'result', 'measure']) || (inf.fitc >= 0 ? r[inf.fitc] : '') || '').trim(),
+                   done: done ? (/\b(done|complete)/i.test(done) ? 'Done' : 'Open') : '', phase: String(pick(t.headers, r, ['phase']) || '').trim() };
+        });
+        if (rows.length) return rows;
+      }
+      return fallback.map((tx) => { const p = splitPair(tx); return { objective: p.head, kr: p.rest, done: '', phase: '' }; });
+    }
+    case 'updates': {
+      if (tables.length) {
+        const rows = fromTables((t, r, id, inf) => {
+          const title = pick(t.headers, r, ['title', 'risk or issue', 'name']) || (inf.stmtc >= 0 ? r[inf.stmtc] : '');
+          const desc = pick(t.headers, r, ['description', 'desc', 'what']) || (inf.fitc >= 0 ? r[inf.fitc] : '');
+          if (!String(title || '').trim() && !String(desc || '').trim()) return null;
+          const ty = String(pick(t.headers, r, ['type']) || '').trim();
+          return { type: /^r/i.test(ty) ? 'Risk' : /^i/i.test(ty) ? 'Issue' : '',
+                   title: withId(id, String(title || '').trim()), desc: String(desc || '').trim(),
+                   action: pick(t.headers, r, ['action', 'mitigation', 'response']), owner: pick(t.headers, r, ['owner', 'who']),
+                   delivery: pick(t.headers, r, ['delivery', 'due', 'date']), status: pick(t.headers, r, ['status']) || 'Open',
+                   notes: pick(t.headers, r, ['notes']) };
+        });
+        if (rows.length) return rows;
+      }
+      return fallback.map((tx) => {
+        const m = tx.match(/^(risk|issue)\s*[:\-·]\s*(.+)$/i);
+        const type = m ? (m[1][0].toUpperCase() === 'R' ? 'Risk' : 'Issue') : '';
+        const p = splitPair(m ? m[2] : tx);
+        return p.rest ? { type, title: p.head, desc: p.rest, status: 'Open' } : { type, title: '', desc: m ? m[2] : tx, status: 'Open' };
+      });
+    }
     case 'components':
       return fallback.map((t) => { const p = splitPair(t); return { name: p.head, owner: '', status: '', desc: p.rest }; });
     case 'interfaces': {
@@ -715,30 +820,49 @@ export function mapArtifacts(files) {
       const kind = intakeKind(qid);
       const p = byQid[qid] || (byQid[qid] = { qid, kind, sources: [], value: '', rows: [] });
       if (!p.sources.includes(f.name || 'pasted text')) p.sources.push(f.name || 'pasted text');
-      if (kind === 'long') p.value = p.value ? p.value + '\n\n' + seg.body : seg.body;
-      else if (kind === 'list') {
-        const bl = bulletItems(seg.body);
-        // A list-shaped section arriving as a table (Goals, Assumptions with
-        // ID and Label columns) lands one line per row, ID and label kept.
-        let rows = bl.length ? bl : mdTablesAll(seg.body).flatMap(listFromTable);
-        // Record-form prose lists (Never build) write one prohibition per
-        // line with no bullet marks: each sentence line is one item.
-        if (!rows.length) rows = seg.body.split('\n').map((l) => l.trim()).filter((l) => /^[A-Z].{4,}/.test(l));
-        p.rows.push(...rows.map((t) => ({ text: t })));
-      }
+      if (kind === 'long' || kind === 'short') p.value = p.value ? p.value + '\n\n' + seg.body : seg.body;
+      else if (kind === 'list') p.rows.push(...listItemsFrom(seg.body).map((t) => ({ text: t })));
       else {
         let rows = extractRows(qid, seg.body, f.name);
         if (!rows.length && qid === 'glossary') rows = plainGlossaryRows(seg.body);
         if (!rows.length && qid === 'decisions') rows = plainDecisionRows(seg.body);
         p.rows.push(...rows);
       }
-      if (p.kind !== 'long' && !p.rows.length && seg.body) {
+      if (p.kind !== 'long' && p.kind !== 'short' && !p.rows.length && seg.body) {
         unplaced.push({ title: seg.title || '(untitled)', body: seg.body, source: f.name || 'pasted text' });
       }
     }
   }
-  const placements = Object.values(byQid).filter((p) => (p.kind === 'long' ? p.value.trim() : p.rows.length));
+  const placements = Object.values(byQid).filter((p) => (p.kind === 'long' || p.kind === 'short' ? p.value.trim() : p.rows.length));
   return { placements, unplaced };
+}
+
+/* A list-shaped body → one string per item. Bullets first; a list section
+   arriving as a table (Goals, Assumptions with ID and Label columns) lands
+   one line per row, ID and label kept; record-form prose lists (Never
+   build) write one item per line with no bullet marks. */
+export function listItemsFrom(body) {
+  const bl = bulletItems(body);
+  let rows = bl.length ? bl : mdTablesAll(body).flatMap(listFromTable);
+  if (!rows.length) rows = String(body || '').split('\n').map((l) => l.trim()).filter((l) => /^[A-Z].{4,}/.test(l));
+  return rows;
+}
+
+/* One unplaced section, one user-chosen home → the same landing shape the
+   classifier would produce. Prose targets take the body verbatim (the caller
+   appends, never overwrites); list and rows targets run the same
+   deterministic extractors, so a routed table lands exactly like a
+   classified one. Zero extracted rows is an honest answer the preview shows
+   before anything is written. */
+export function routeUnplaced(qid, body, source) {
+  const kind = intakeKind(qid);
+  if (!kind) return null;
+  if (kind === 'long' || kind === 'short') return { kind, value: String(body || '').trim(), rows: [] };
+  if (kind === 'list') return { kind, value: '', rows: listItemsFrom(body).map((t) => ({ text: t })) };
+  let rows = extractRows(qid, body, source);
+  if (!rows.length && qid === 'glossary') rows = plainGlossaryRows(body);
+  if (!rows.length && qid === 'decisions') rows = plainDecisionRows(body);
+  return { kind, value: '', rows };
 }
 
 /* Selected placements + current answers → concrete write operations, with
