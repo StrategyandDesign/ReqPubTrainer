@@ -117,7 +117,7 @@ const MAP = [
   // still stays unplaced: too many documents use it for content that is not
   // a delivery row, and unplaced beats misplaced.
   [/\b(risks? (and|&) issues?)\b/, 'updates'],
-  [/\b(people and roles|roles and responsibilities|project team)\b/, 'people'],
+  [/\b(people(,| and) roles|roles and responsibilities|project team)\b/, 'people'],
   [/\b(glossary|terminology|definitions?|people and words)\b/, 'glossary'],
   [/\b(never build|prohibitions?)\b/, 'constrain'],
   [/\b(open items?|open questions?)\b/, 'decisions'],
@@ -158,7 +158,44 @@ export function normalizeRecordDoc(text) {
   }).join('\n');
   t = t.replace(/^\s*SECTION\s+(\d+)\s*\n+\s*([A-Z].{2,70}?)\.?[ \t]*$/gm, '$1. $2');
   t = t.replace(/^\s*PILLAR\s+(ONE|TWO|THREE|FOUR|FIVE)\s*\n+\s*([A-Z].{2,70}?)\.?[ \t]*$/gm, '# $2');
-  return t;
+  // Paste-block ruled headings: a label framed in box-drawing runs, the
+  // dialect the PRD assistant emits one block per destination field
+  // ("\u2500\u2500 Section 1 \u00b7 Purpose and audience \u2500\u2500\u2500\u2500\u2500", "\u2500\u2500 Section 7 \u00b7
+  // Functional Requirements \u00b7 Paste rows \u2500\u2500\u2500\u2500\u2500"). The section number and
+  // the Paste rows suffix are navigation, not label, so both strip; what
+  // remains is the field's own name, which the exact-label tier hears.
+  t = t.split('\n').map((line) => {
+    const m = line.match(/^\s*\u2500{2,}\s*(.+?)\s*\u2500{2,}\s*$/);
+    if (!m) return line;
+    let label = m[1].trim();
+    label = label.replace(/^(?:section\s+\d+|document control)\s*\u00b7\s*/i, '');
+    label = label.replace(/\s*\u00b7\s*paste rows\s*$/i, '');
+    return label ? '# ' + label : line;
+  }).join('\n');
+  // A horizontal rule after a blank line is block furniture between
+  // sections; a ruled line directly under text is a setext underline and
+  // stays for the segmenter to consume.
+  const pre = t.split('\n');
+  t = pre.filter((line, i) => !(/^\s*(-{3,}|={3,})\s*$/.test(line) && (i === 0 || !pre[i - 1].trim()))).join('\n');
+  // Bare pipe tables: rows written "ID | Requirement | Fit criterion"
+  // with no leading pipe and no separator line, the way a hand-authored
+  // block or a chat transcript carries them. Two or more consecutive such
+  // lines are a table; the first line is its header. Lines already inside
+  // a markdown table or carrying a bullet stay untouched.
+  const bare = (l) => / \| /.test(l) && !l.trim().startsWith('|') && !/^\s*(?:[-*\u2022]|\d+[.)])\s/.test(l);
+  const src = t.split('\n');
+  const out = [];
+  for (let i = 0; i < src.length; i++) {
+    if (bare(src[i]) && i + 1 < src.length && bare(src[i + 1])) {
+      const run = [];
+      while (i < src.length && bare(src[i])) { run.push(src[i]); i++; }
+      i--;
+      const cells = (l) => l.trim().split(/\s*\|\s*/).map((c) => c.trim());
+      const row = (l) => '| ' + cells(l).join(' | ') + ' |';
+      out.push(row(run[0]), '|' + cells(run[0]).map(() => ' --- ').join('|') + '|', ...run.slice(1).map(row));
+    } else out.push(src[i]);
+  }
+  return out.join('\n');
 }
 
 /* Record-form glossaries write UPPERCASE TERM then the definition on one
@@ -236,7 +273,8 @@ const HEADER_VOCAB = new Set(['id', 'ref', 'identifier', 'requirement', 'stateme
   'verification', 'rel', 'release', 'dimension', 'metric', 'threshold', 'target', 'dataset', 'set',
   'term', 'meaning', 'definition', 'persona', 'user', 'role', 'job', 'name', 'gate', 'milestone',
   'decision', 'basis', 'rationale', 'owner', 'date', 'interface', 'description', 'label', 'method',
-  'verified by', 'notes', 'comp', 'component']);
+  'verified by', 'notes', 'comp', 'component', 'executed by', 'evaluation set', 'eval set',
+  'objective', 'key result', 'segment', 'share', 'entity', 'sensitivity', 'done', 'phase']);
 export function pasteRowsMd(text) {
   let t = String(text || '');
   if (t.length > PASTE_CAP) t = t.slice(0, PASTE_CAP);
@@ -254,6 +292,21 @@ export function pasteRowsMd(text) {
     // No header on the clipboard: a blank header row keeps every pasted
     // line as data and hands the column roles to content inference.
     return [row(first.map(() => ' ')), sep, ...lines.map((l) => row(cells(l)))].join('\n');
+  }
+  // Bare pipe rows ("ID | Requirement | Fit criterion" with no leading
+  // pipe), the way a paste-ready block or a chat transcript writes a
+  // table. Stray prose lines around the table are ignored; the pipe
+  // lines are the table, and the first decides header the same way the
+  // tab path does.
+  const plines = lines.filter((l) => / \| /.test(l));
+  if (plines.length >= 2) {
+    const cells = (l) => l.trim().split(/\s*\|\s*/).map((c) => c.trim());
+    const first = cells(plines[0]);
+    const headery = first.filter((c) => HEADER_VOCAB.has(c.toLowerCase())).length >= Math.max(1, Math.ceil(first.length / 2));
+    const row = (cs) => '| ' + cs.join(' | ') + ' |';
+    const sep = '|' + first.map(() => ' --- ').join('|') + '|';
+    if (headery) return [row(first), sep, ...plines.slice(1).map((l) => row(cells(l)))].join('\n');
+    return [row(first.map(() => ' ')), sep, ...plines.map((l) => row(cells(l)))].join('\n');
   }
   return lines.map((l) => (/^[-*\u2022]\s/.test(l.trim()) ? '- ' + l.trim().replace(/^[-*\u2022]\s+/, '') : '- ' + l.trim())).join('\n');
 }
@@ -515,6 +568,21 @@ const priOf = (s) => {
   if (/^[MSCW]$/i.test(t)) return { m: 'Must', s: 'Should', c: 'Could', w: "Won't" }[t.toLowerCase()];
   return /\b(must|shall)\b/i.test(t) ? 'Must' : /\bshould\b/i.test(t) ? 'Should' : /\b(could|may|nice[- ]to[- ]have)\b/i.test(t) ? 'Could' : /\bwon'?t\b/i.test(t) ? "Won't" : '';
 };
+/* The Executed by vocabulary, normalized from a table cell: Human, Agent,
+   or Mixed, and nothing else. Anything unrecognized stays blank rather
+   than guessed, and the record's own default applies. */
+const execOf = (s) => {
+  const t = String(s || '').trim();
+  return /\bmixed\b/i.test(t) ? 'Mixed' : /\bagent\b/i.test(t) ? 'Agent' : /\bhuman\b/i.test(t) ? 'Human' : '';
+};
+/* Unbulleted "Head: rest" line runs, the shape a paste-ready block writes
+   personas and people in. Conservative: two or more lines, and EVERY line
+   pairs, so a prose paragraph with one incidental colon never sheds rows. */
+export function pairLines(body) {
+  const lines = String(body || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
+  return lines.every((l) => /^(.{2,60}?)(?::\s+| - ).+$/.test(l)) ? lines : [];
+}
 /* Permanent identifiers (FR-M1-001, SM-3, D-2) are doctrine in a serious
    PRD: they never change, so they must survive intake. The record's own
    row IDs are positional, so a source ID travels as a prefix on the row's
@@ -610,7 +678,10 @@ export function extractRows(qid, body, source) {
           if (!String(stmt || '').trim() || String(stmt).trim() === id) return null;
           const fit = pick(t.headers, r, ['fit', 'acceptance', 'criterion', 'criteria']) || (inf.fitc >= 0 ? r[inf.fitc] : '');
           const pri = pick(t.headers, r, ['pri', 'moscow']) || (inf.pric >= 0 ? r[inf.pric] : '');
-          return { stmt: withId(id, stmt), fit: String(fit || '').trim() || 'to confirm', pri: priOf(pri), comp: '', src };
+          const out = { stmt: withId(id, stmt), fit: String(fit || '').trim() || 'to confirm', pri: priOf(pri), comp: '', src };
+          const exec = execOf(pick(t.headers, r, ['executed', 'exec']));
+          if (exec) out.exec = exec;
+          return out;
         });
         if (rows.length) return rows;
       }
@@ -624,10 +695,13 @@ export function extractRows(qid, body, source) {
         const rows = fromTables((t, r, id, inf) => {
           const dim = pick(t.headers, r, ['dimension', 'quality', 'requirement']) || (inf.stmtc >= 0 ? r[inf.stmtc] : '');
           if (!String(dim || '').trim() || String(dim).trim() === id) return null;
-          return { dim: withId(id, dim),
-                   metric: pick(t.headers, r, ['metric', 'method', 'fit']) || (inf.fitc >= 0 ? r[inf.fitc] : '') || 'to confirm',
-                   thresh: pick(t.headers, r, ['threshold', 'target']) || 'to confirm',
-                   dataset: pick(t.headers, r, ['set', 'dataset']) || 'to confirm', comp: '' };
+          const out = { dim: withId(id, dim),
+                        metric: pick(t.headers, r, ['metric', 'method', 'fit']) || (inf.fitc >= 0 ? r[inf.fitc] : '') || 'to confirm',
+                        thresh: pick(t.headers, r, ['threshold', 'target']) || 'to confirm',
+                        dataset: pick(t.headers, r, ['set', 'dataset']) || 'to confirm', comp: '' };
+          const exec = execOf(pick(t.headers, r, ['executed', 'exec']));
+          if (exec) out.exec = exec;
+          return out;
         });
         if (rows.length) return rows;
       }
@@ -665,7 +739,7 @@ export function extractRows(qid, body, source) {
         });
         if (rows.length) return rows;
       }
-      return fallback.map((tx) => { const p = splitPair(tx); return { persona: p.head, needs: p.rest }; });
+      return (fallback.length ? fallback : pairLines(body)).map((tx) => { const p = splitPair(tx); return { persona: p.head, needs: p.rest }; });
     }
     case 'seg': {
       if (tables.length) {
@@ -677,7 +751,7 @@ export function extractRows(qid, body, source) {
         });
         if (rows.length) return rows;
       }
-      return fallback.map((tx) => { const p = splitPair(tx); return { segment: p.head, share: '', desc: p.rest }; });
+      return (fallback.length ? fallback : pairLines(body)).map((tx) => { const p = splitPair(tx); return { segment: p.head, share: '', desc: p.rest }; });
     }
     case 'people': {
       if (tables.length) {
@@ -688,7 +762,7 @@ export function extractRows(qid, body, source) {
         });
         if (rows.length) return rows;
       }
-      return fallback.map((tx) => { const p = splitPair(tx); return { name: p.head, role: p.rest }; });
+      return (fallback.length ? fallback : pairLines(body)).map((tx) => { const p = splitPair(tx); return { name: p.head, role: p.rest }; });
     }
     case 'release': {
       if (tables.length) {
@@ -747,7 +821,7 @@ export function extractRows(qid, body, source) {
         const rows = fromTables((t, r, id, inf) => {
           const iface = pick(t.headers, r, ['interface', 'iface', 'requirement']) || (inf.stmtc >= 0 ? r[inf.stmtc] : '');
           if (!String(iface || '').trim() || String(iface).trim() === id) return null;
-          return { iface: withId(id, iface), req: '',
+          return { iface: withId(id, iface), req: pick(t.headers, r, ['description', 'desc', 'must do']),
                    fit: pick(t.headers, r, ['fit', 'criterion', 'acceptance']) || (inf.fitc >= 0 ? r[inf.fitc] : '') };
         });
         if (rows.length) return rows;

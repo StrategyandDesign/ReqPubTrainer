@@ -7,7 +7,7 @@
    a product doc drafted in a chat assistant, pasted or uploaded as-is. */
 import assert from 'node:assert/strict';
 import {
-  segmentText, classifySegment, intakeKind, bulletItems, mdTableIn, splitPair, extractRows, mapArtifacts, applyPlan, executeOps, pdfTextFromItems, mdUnescape, pdfMarkdownFromItems, mdTablesAll, inferColumns, htmlToIntakeMd, pdfEmptyDiagnosis, pasteToRows, routeUnplaced
+  segmentText, classifySegment, intakeKind, bulletItems, mdTableIn, splitPair, extractRows, mapArtifacts, applyPlan, executeOps, pdfTextFromItems, mdUnescape, pdfMarkdownFromItems, mdTablesAll, inferColumns, htmlToIntakeMd, pdfEmptyDiagnosis, pasteToRows, routeUnplaced, pairLines
 } from '../app/js/intake.js';
 import { Q } from '../app/js/domain.js';
 
@@ -609,6 +609,87 @@ test('routeUnplaced is honest about a zero yield and refuses non-targets', () =>
   assert.equal(zero.rows.length, 0, 'no junk row from intro prose');
   assert.equal(routeUnplaced('ctrl_product', 'text', 'x.md'), null, 'control questions are never homes');
   assert.equal(routeUnplaced('nope', 'text', 'x.md'), null);
+});
+
+/* ---- the paste-blocks dialect ----
+   The PRD assistant emits one block per destination field, each under a
+   ruled heading carrying the field's own label, tables as bare pipe rows
+   with no leading pipe. First construction of a record should be ONE paste
+   of that whole file into Populate from documents, so the dialect is pinned
+   here against a condensed real specimen. */
+const BLOCKS = [
+  '# ReqPub paste-ready blocks',
+  '',
+  'One block per destination field. Copy the text under each rule.',
+  '',
+  '---',
+  '',
+  '── Document Control · Project name ──────────────────',
+  '',
+  'ReqPub Platform',
+  '',
+  '── Section 1 · Purpose and audience ──────────────────',
+  '',
+  'This document defines the requirements for the platform.',
+  '',
+  '── Section 2 · Personas ──────────────────',
+  '',
+  'Program lead: keeps the record current with no reconciliation.',
+  'Partner: puts a signed baseline in front of a client.',
+  '',
+  '── Section 2 · Operating context ──────────────────',
+  '',
+  'The record sits beside an existing programme platform.',
+  '',
+  '---',
+  '',
+  '── Section 7 · Functional Requirements · Paste rows ──────────────────',
+  '',
+  'Priority uses MoSCoW: Must, Should, Could, or Won’t.',
+  '',
+  'ID | Requirement | Fit criterion | Priority | Executed by | Evaluation set',
+  'FR-001 | A manager generates a version, and that baseline never changes. | [to confirm] | Must | Human | Not applicable',
+  'FR-013 | The MCP server exposes five read tools and one gated propose. | [to confirm] | Must | Agent | [to confirm]',
+  '',
+  '── Section 12 · Release-specific acceptance notes ──────────────────',
+  '',
+  'Almost every requirement is deterministic and verifiable by test.',
+  '',
+  '── Section 14 · People, Roles, and Links · Paste rows ──────────────────',
+  '',
+  'Role | Name and title',
+  'Document owner | [to confirm]',
+  'Technical lead | [to confirm]',
+].join('\n');
+test('a paste-blocks file lands whole: ruled headings are field labels, bare pipe rows are tables', () => {
+  const { placements, unplaced } = mapArtifacts([{ name: 'blocks.md', text: BLOCKS }]);
+  const by = Object.fromEntries(placements.map((p) => [p.qid, p]));
+  assert.ok(by.ov_purpose && by.ov_purpose.value.includes('defines the requirements'), 'Section prefix strips to the field label');
+  assert.deepEqual(by.persona.rows[0], { persona: 'Program lead', needs: 'keeps the record current with no reconciliation.' }, 'unbulleted pair lines are persona rows');
+  assert.ok(by.context && by.context.kind === 'long', 'Operating context lands on its own question');
+  assert.equal(by.fr.rows.length, 2, 'the bare pipe table is a table; the MoSCoW preamble line is not a row');
+  assert.deepEqual(by.fr.rows[0], { stmt: 'FR-001: A manager generates a version, and that baseline never changes.', fit: '[to confirm]', pri: 'Must', comp: '', src: 'Import · blocks.md', exec: 'Human' });
+  assert.equal(by.fr.rows[1].exec, 'Agent', 'the Executed by column survives intake');
+  assert.ok(by.verify_note.value.includes('deterministic'), 'the Paste rows suffix strips from the label');
+  assert.deepEqual(by.people.rows[0], { name: '[to confirm]', role: 'Document owner' }, 'People, Roles, and Links reaches People and roles');
+  const un = Object.fromEntries(unplaced.map((u) => [u.title, u.body]));
+  assert.equal(un['Project name'], 'ReqPub Platform', 'control fields stay a human decision, shown not guessed');
+  assert.ok(!('---' in un) && un['Project name'].indexOf('---') < 0, 'rule lines are furniture, not body');
+});
+test('bare pipe rows reach Paste rows too, headers mapped, prose around the table ignored', () => {
+  const rows = pasteToRows('fr', 'Priority uses MoSCoW.\n\nID | Requirement | Fit criterion | Priority | Executed by\nFR-002 | The first approval moves a draft into review. | [to confirm] | Must | Mixed');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].stmt, 'FR-002: The first approval moves a draft into review.');
+  assert.equal(rows[0].exec, 'Mixed');
+});
+test('an interfaces table with a Description column lands it as the requirement', () => {
+  const rows = extractRows('interfaces', '| ID | Interface | Description | Fit criterion |\n| --- | --- | --- | --- |\n| IR-001 | MCP server | Five read tools and one gated propose. | [to confirm] |', 'b.md');
+  assert.deepEqual(rows[0], { iface: 'IR-001: MCP server', req: 'Five read tools and one gated propose.', fit: '[to confirm]' });
+});
+test('pairLines is conservative: one incidental colon in prose sheds no rows', () => {
+  assert.deepEqual(pairLines('Four groups write to the record: the lead, the team, the customer, and contributors.'), []);
+  assert.deepEqual(pairLines('Lead: keeps the record current\nPartner: signs the baseline'), ['Lead: keeps the record current', 'Partner: signs the baseline']);
+  assert.deepEqual(pairLines('Lead: keeps the record current\nA prose sentence with no pair shape at all'), [], 'one unpaired line disqualifies the run');
 });
 
 console.log(`intake.test: ${n}/${n} passed`);

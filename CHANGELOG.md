@@ -36,6 +36,20 @@ deletion, Data residency, Access control). Eleven new unit checks pin all of
 it. The database is unchanged: the same save_field and upsert_row paths carry
 every write.
 
+**First construction from a paste-blocks file is one paste.** The PRD
+assistant workflow emits one block per destination field under ruled
+headings, tables as bare pipe rows with no leading pipe. That whole file now
+lands in a single Populate from documents pass: ruled headings normalize to
+the field's own label (section numbers and the Paste rows suffix strip),
+runs of bare pipe rows become tables for both bulk intake and per-table
+Paste rows, the Executed by column survives into requirement and evaluation
+rows, an interfaces Description column lands as the requirement, and
+unbulleted "Name: description" runs land as persona, people, and segment
+rows when every line pairs. Control fields stay a human decision and appear
+unplaced rather than guessed. Verified against the real specimen: 25 of its
+34 blocks land in one paste, 88 rows and 12 prose answers, with the
+remainder shown honestly. Four more unit checks pin the dialect.
+
 ## 3.0.1
 
 Two supply chain defects, one of which broke a working feature.
