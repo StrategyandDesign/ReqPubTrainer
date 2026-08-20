@@ -15,7 +15,7 @@
     "pretest:backend": "node scripts/check-locale.mjs"
   },
   "devDependencies": {
-    "@typescript-eslint/parser": "^8.66.0",
+    "@typescript-eslint/parser": "^8.67.0",
     "ajv": "^8.20.0",
     "embedded-postgres": "17.5.0-beta.15",
     "eslint": "^9.39.5",
