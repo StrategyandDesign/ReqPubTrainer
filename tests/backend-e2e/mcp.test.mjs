@@ -52,6 +52,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0023_webhooks.sql')));
   await run(sql(rel('../../supabase/migrations/0024_mcp.sql')));
   await run(sql(rel('../../supabase/migrations/0024_mcp.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('migrations/0024_mcp.sql applies twice on the full prior stack', true);
 
   const conDef = await one(`select pg_get_constraintdef(oid) d from pg_constraint

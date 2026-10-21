@@ -45,6 +45,7 @@ try {
 
   // Backfill runs inside migrations/0012_partner_notes.sql.
   await run(sql(rel('../../supabase/migrations/0012_partner_notes.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   const bf = await one(`select ref, title from comms where origin='partner' order by created_at limit 1`);
   check('legacy note is backfilled with PN-1', bf.ref === 'PN-1', bf.ref);
   check('legacy note gets a headline from its body', bf.title.startsWith('Our SMEs need the Spanish flow'), bf.title);

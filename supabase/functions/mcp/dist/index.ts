@@ -25,7 +25,7 @@
 // and pinned byte for byte by tests/mcp-scheme.test.mjs.
 
 // ---- inlined supabase/functions/mcp/core.js ----
-const APP_VERSION = '3.0.1';
+const APP_VERSION = '3.1.0';
 /* ReqPub v2 - core utilities: escaping, formatting, icons, theme, toast. */
 
 const esc = (s) => String(s == null ? '' : s)

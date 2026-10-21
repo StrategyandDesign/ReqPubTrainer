@@ -2,13 +2,13 @@
   "generated": "by scripts/record-counts.mjs; do not edit by hand",
   "format": "reqpub-check-counts",
   "formatVersion": 1,
-  "version": "3.0.1",
-  "recordedAt": "2026-08-10T21:26:04.304Z",
-  "unit": 579,
-  "unitSuites": 37,
-  "backend": 841,
+  "version": "3.1.0",
+  "recordedAt": "2026-10-21T21:05:18.365Z",
+  "unit": 596,
+  "unitSuites": 38,
+  "backend": 862,
   "backendSuites": 35,
   "failed": 0,
-  "total": 1420,
-  "testsHash": "f4fdfcd132f5dc10"
+  "total": 1458,
+  "testsHash": "ded592d881d61b69"
 }

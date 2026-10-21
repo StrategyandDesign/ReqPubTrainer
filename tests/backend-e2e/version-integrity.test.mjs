@@ -49,7 +49,9 @@ try {
   const made = await one(`select create_version('reqpub', false, 'Initial', '{"answers":{"ov_vision":"V"}}'::jsonb, '') r`);
   check('create_version still allocates the baseline', made.r.ok === true && made.r.label === '1.0', made.r);
   const vid = made.r.id;
-  await run(`insert into version_approvals(version_id, approver_role, approver_name) values ('${vid}','Sponsor','Client')`);
+  // v3.1: a manager decides a slot assigned to a teammate; an unassigned slot
+  // is the client's and takes an e-signature, which esign.test.mjs covers.
+  await run(`insert into version_approvals(version_id, approver_role, approver_name, approver_user_id) values ('${vid}','Reviewer','Mia','${MGR}')`);
 
   // The hole, closed: every direct write to versions is refused at the grant,
   // for a manager of the very project that owns the row.
@@ -98,6 +100,7 @@ try {
   await run(`create policy ver_update on versions for update using (is_project_manager(project_id)) with check (is_project_manager(project_id))`);
   await run(sql(rel('../../supabase/migrations/0019_version_integrity.sql')));
   await run(sql(rel('../../supabase/migrations/0019_version_integrity.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   await asUser(MGR); await run('set role authenticated');
   check('migrations/0019_version_integrity.sql closes a legacy install and runs twice cleanly',
     await denied(`update versions set status='approved' where id='${vid}'`));

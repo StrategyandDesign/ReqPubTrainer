@@ -130,12 +130,16 @@ ${rowVals.join(',\n')};
       ${jsonb(snapshot)}, v_owner, now())
     returning id into v_ver;
 
-  -- Record the document's named approvers as signed off. The provenance trigger
-  -- forces new rows to 'pending', so we insert then mark approved.
-  insert into version_approvals (version_id, approver_role, approver_name) values
-    (v_ver, 'Product', 'Micah Canfield'),
-    (v_ver, 'Engineering', 'Alon Arad'),
-    (v_ver, 'Sponsor', 'Dr. Ken Canfield');
+  -- Record the document's named approvers as signed off. These sign-offs were
+  -- given before the record came to ReqPub, so each slot is assigned to the
+  -- deploying owner, who records them: the provenance trigger forces new rows
+  -- to 'pending' and (v3.1) refuses 'approved' on a slot with no assignee,
+  -- because an unassigned slot is filled only by its holder's e-signature.
+  -- decided_by therefore names the owner, truthfully, as the recorder.
+  insert into version_approvals (version_id, approver_role, approver_name, approver_user_id) values
+    (v_ver, 'Product', 'Micah Canfield', v_owner),
+    (v_ver, 'Engineering', 'Alon Arad', v_owner),
+    (v_ver, 'Sponsor', 'Dr. Ken Canfield', v_owner);
 
   update version_approvals set status = 'approved', decided_by = v_owner, decided_at = now() where version_id = v_ver;
 

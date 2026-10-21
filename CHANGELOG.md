@@ -1,6 +1,74 @@
 # Changelog
 
-## Unreleased
+## 3.1.0
+
+The record conformance release. A discovery method paper described the
+record this product keeps: operators author and sign the tests, the firm
+never signs for the client, the signed artifact holds only what people
+wrote, and each signed version carries two timestamps nobody at the table
+set. An audit of that paper against this codebase found four of its
+sentences contradicted and the rest narrower than written. This release
+closes the ones a client's control function would test first.
+
+**The signature covers the pass condition.** A signature page carried each
+requirement's statement and stripped its fit criterion, so a signer confirmed
+a fingerprint over text they could not see. The signature page and the
+printed client baseline report now carry fit and executed-by; a brief for an
+SME, and the presentation link built from it, are unchanged. The disclosure
+decision lives in buildSharePayload and is pinned by test.
+
+**The firm cannot approve for the client.** An approval slot with no assigned
+teammate belongs to someone outside the team. approval_decide refuses to
+approve it (esign_required) and the provenance trigger refuses the same
+transition on a direct write; the slot is filled by that person's e-signature,
+which sign_request_sign now lands on the slot named for the signer. The
+manager-recorded sign-off on an approved baseline is gone. A signature also
+advances the version exactly as an in-app decision does; a fully signed
+version no longer stands In review.
+
+**Nothing computed is stored under the fingerprint.** Readiness signals were
+frozen into each version snapshot and printed as Record state on the client
+cover. The snapshot carries the gate name and nothing derived; signals are
+computed on screen and on the gate packet at print time, labelled as such.
+
+**A timestamp reply is checked, read, and kept.** receipt_tsa_update accepted
+any text and marked a receipt dual; it now refuses a reply without the shape
+of a granted RFC 3161 response carrying the receipt's canonical hash, and a
+stored reply is never overwritten, so a sign-link holder cannot replace a
+genuine token. The verify CLI reads each token (status, imprint, genTime, CMS
+signature against the certificate in the token) instead of printing an
+openssl command and leaving the token unread; a token it cannot read (an
+unknown digest or signature algorithm, indefinite lengths) is reported as not
+checked with the openssl line, never as a failure; the chain-to-root decision
+stays with the reader and openssl. A synthetic authority in the test fixtures
+signs real tokens for the suites.
+
+**Rows remember who authored them.** field_rows carries author_name and
+origin, stamped once at insert by upsert_row from the promoted Inbox entry,
+so an SME's words carry the SME's name and an agent's draft stays marked
+agent after promotion. The implementation package prints author and origin
+beside the attested recorder. The Inbox labels agent proposals as Agent.
+
+**Requirements are checked for EARS shape.** A requirement outside the five
+EARS shapes (ubiquitous, event, state, optional, unwanted) raises a readiness
+warning naming the shape to write. The placeholder, the starter template and
+the help topic use the shape. The first piece of the mechanical review tier.
+
+**The last baseline's signers are this one's default signers.** A version
+with no signature requests offers the people who signed the previous signed
+baseline, one click to send each of them a link to this exact baseline.
+
+Three defects found by the audit: the Record of Delivery printed "timestamp
+status single" because it expected words the database never stored; a
+changed eval set never showed in any diff because dataset was absent from
+the diff columns; CHANGES.md and prd.md in the implementation package carried
+no fingerprint and acceptance.md a truncated one. All three fixed and pinned.
+
+Migration 0030_record_conformance.sql carries the schema changes, idempotent,
+with its ledger row. Every backend suite that replays an older migration
+now ends its stack with it, so what the suites test is what ships.
+
+Intake, carried over from the unreleased work on main:
 
 Intake heard keywords but not the record's own vocabulary. A program document
 written in the record's OWN section labels came back with seven headings

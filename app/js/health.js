@@ -22,7 +22,7 @@
    collection simply contributes nothing.
    ============================================================================ */
 
-import { rowsFilled, isEngagement } from './domain.js';
+import { rowsFilled, isEngagement, earsShape } from './domain.js';
 
 /* Origins that arrive from outside the team (mirrors the inbox constant). */
 const EXTERNAL_ORIGINS = ['brief', 'app', 'sme', 'partner'];
@@ -110,6 +110,14 @@ export function healthSignals(a, ctx = {}) {
       'Must requirement' + (noFit.length === 1 ? '' : 's') + ' without a fit criterion',
       'Every Must needs its measurable acceptance condition before a baseline is defensible.');
 
+    // Requirements outside the EARS shapes. A sentence with no trigger and no
+    // shall cannot be turned into a test that anyone could sign. A warning,
+    // not a gap: records written before v3.1 carry free text and stay valid.
+    const notEars = [...filled(a.fr), ...filled(a.nfr)].filter((r) => !blank(r.stmt) && !earsShape(r.stmt));
+    add('req_not_ears', 'warn', notEars.length,
+      'Requirement' + (notEars.length === 1 ? '' : 's') + ' not in EARS form',
+      'Write each as When <trigger>, the system shall <response>; or While, Where, If then, or The system shall.');
+
     // AI declared, but Section 9 is empty: probabilistic components cannot be
     // verified by a single expected output; they need evaluation criteria.
     if (a.has_ai === 'Yes') {
@@ -175,7 +183,7 @@ export function healthSignals(a, ctx = {}) {
   const approvedNoAppr = (ctx.versions || []).filter((v) => v.status === 'approved' && !slotsOf(v));
   add('approved_no_signoff', 'warn', approvedNoAppr.length,
     'Approved without a named sign-off' + (approvedNoAppr.length ? ': ' + labelList(approvedNoAppr) : ''),
-    'The cover shows approval by state alone. Open that version in Version history and record the sign-off - it is stamped to whoever records it - and this clears the moment it lands.');
+    'The cover shows approval by state alone. Open that version in Version history and request the signer\u2019s e-signature; it lands as a named sign-off with its receipt, and this clears the moment it does.');
 
   // signed a baseline the client-facing surface does not yet reflect.
   const lv = latestVersion(ctx.versions);

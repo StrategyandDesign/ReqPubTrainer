@@ -170,6 +170,7 @@ try {
   // safe to run twice against an already-fixed database.
   await run(sql(rel('../../supabase/migrations/0011_partner_identity.sql')));
   await run(sql(rel('../../supabase/migrations/0011_partner_identity.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   const afterPatch = (await one(`select count(*)::int n from partners where org_id='${ORG}' and coalesce(trim(email),'') <> ''`)).n;
   check('migrations/0011_partner_identity.sql is idempotent against a fixed database', afterPatch === 1, afterPatch);
 } catch (e) {

@@ -110,7 +110,7 @@ const AUTH_ONLY_ALLOW = [
   'update_publish(text, jsonb, timestamptz, text, text, text, text)',
   'update_revoke(uuid)',
   'updates_next_id(text, text)',
-  'upsert_row(text, text, uuid, jsonb, double precision, integer)',
+  'upsert_row(text, text, uuid, jsonb, double precision, integer, uuid)',
   'v2_context()',
   'verify_project_chain(text)',
   'version_set_build(uuid, text)',
@@ -168,6 +168,7 @@ try {
   /* ---- apply the lockdown, twice ---- */
   await run(sql(rel('../../supabase/migrations/0028_authz_lockdown.sql')));
   await run(sql(rel('../../supabase/migrations/0028_authz_lockdown.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('migrations/0028_authz_lockdown.sql applies twice on the full stack', true);
 
   /* ---- the exploit is refused ---- */

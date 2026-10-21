@@ -29,9 +29,12 @@ const fmtDay = (d) => {
 /* Timestamp language, exactly as docs/VERIFY.md states it. A receipt says
    what it proves and no more. */
 export function tsaLine(status) {
+  // The stored vocabulary is pending, single, dual (0021_sealing.sql). The
+  // older words primary and none are accepted so a receipt row sealed before
+  // v3.1 still reads as what it proves.
   if (status === 'dual') return 'sealed and timestamped by two independent authorities';
-  if (status === 'primary') return 'sealed and timestamped by one authority';
-  if (status === 'none' || !status) return 'sealed; no timestamp authority responded';
+  if (status === 'single' || status === 'primary') return 'sealed and timestamped by one authority';
+  if (status === 'pending' || status === 'none' || !status) return 'sealed; no timestamp authority responded';
   return 'sealed; timestamp status ' + status;
 }
 

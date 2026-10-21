@@ -38,6 +38,7 @@ try {
   // Prove the standalone migration is idempotent on top of the base schema.
   await run(sql(rel('../../supabase/migrations/0002_approver_assignment.sql')));
   await run(sql(rel('../../supabase/migrations/0001_approval_advance.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
 
   await run(`insert into auth.users(id,email) values
     ('${MGR}','mgr@collection.co'),('${APPR}','erik@collection.co'),('${RIVAL}','rival@other.co')`);
@@ -86,12 +87,31 @@ try {
   check('version cannot be marked approved while the manual slot is pending',
     (await one(`select version_set_status('${V}','approved') r`)).r.error === 'approvals_pending');
 
-  // The last decision approves the version by itself - no second ceremony.
+  // v3.1: a slot with no assigned teammate is the client's. A manager cannot
+  // approve it, by RPC or by direct write; the client's own e-signature can,
+  // and that signature approves the version by itself - no second ceremony.
   const lastR = (await one(`select approval_decide('${manualSlot}','approved') r`)).r;
-  check('deciding the last slot reports the version approved', lastR.ok === true && lastR.version_status === 'approved', lastR);
+  check('a manager cannot approve the client slot: esign_required', lastR.ok === false && lastR.error === 'esign_required', lastR);
+  const direct = await db.query(`update version_approvals set status='approved' where id='${manualSlot}'`).then(() => ({}), (e) => ({ error: e.message }));
+  check('a direct write to the client slot is refused by the provenance trigger', !!direct.error && /esign_required/.test(direct.error), direct);
+  check('a manager can still request changes on the client slot',
+    (await one(`select approval_decide('${manualSlot}','changes_requested','Needs the Q3 figure') r`)).r.ok === true);
+  check('and reopen it', (await one(`select approval_decide('${manualSlot}','pending') r`)).r.ok === true);
+  check('reopening leaves the version at changes requested until a manager sends it for review',
+    (await one(`select status from versions where id='${V}'`)).status === 'changes_requested');
+  check('the manager sends it for review again', (await one(`select version_set_status('${V}','in_review') r`)).r.ok === true);
+  const sr = (await one(`select sign_request_create('${V}','sponsor@client.co','External Sponsor','Sponsor','fp-1') r`)).r;
+  check('the manager opens a signature request for the slot holder', sr.ok === true && !!sr.token, sr);
+  await asUser('');
+  const signed = (await one(`select sign_request_sign('${sr.token}','External Sponsor','UA') r`)).r;
+  check('the signature lands on the slot held for the signer, not on a new row', signed.ok === true && signed.approvalId === manualSlot, signed);
+  check('the slot is approved and linked to the signature record',
+    (await one(`select status, sign_request_id from version_approvals where id='${manualSlot}'`)).status === 'approved');
+  check('the signature reports the version approved', signed.versionStatus === 'approved', signed);
+  await asUser(MGR);
   check('the version row is approved', (await one(`select status from versions where id='${V}'`)).status === 'approved');
   check('the auto transition is on the activity log',
-    (await one(`select count(*)::int c from activity where entity_id='${V}' and action='version.status' and meta->>'via'='approval'`)).c >= 1);
+    (await one(`select count(*)::int c from activity where entity_id='${V}' and action='version.status' and meta->>'via' in ('approval','esign')`)).c >= 1);
 
   // The direct path: one approver on a DRAFT, one click, approved. This is
   // the flow the product promises the designated approver.
@@ -107,7 +127,9 @@ try {
   // reopening a decision on an approved version drops it back to review.
   const V3 = (await one(`insert into versions(project_id,seq,label,status,snapshot) values ('recordmade',3,'1.4','draft','{}') returning id`)).id;
   const s1 = (await one(`insert into version_approvals(version_id,approver_role,approver_name,approver_user_id) values ('${V3}','Engineering Lead','Erik','${APPR}') returning id`)).id;
-  const s2 = (await one(`insert into version_approvals(version_id,approver_role,approver_name) values ('${V3}','Sponsor','External Sponsor') returning id`)).id;
+  // v3.1: the second slot is assigned to the manager so a manager may decide
+  // it; an unassigned slot would take the client's e-signature instead.
+  const s2 = (await one(`insert into version_approvals(version_id,approver_role,approver_name,approver_user_id) values ('${V3}','Sponsor','Mia','${MGR}') returning id`)).id;
   await asUser(APPR);
   check('the first approval moves a draft into review',
     (await one(`select approval_decide('${s1}','approved') r`)).r.version_status === 'in_review');

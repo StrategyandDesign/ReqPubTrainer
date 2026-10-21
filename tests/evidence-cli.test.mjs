@@ -5,6 +5,7 @@
    removed (the file becomes unlisted); MISMATCH when a stray file appears.
    The CLI imports nothing from ReqPub; this gate proves the doc suffices. */
 import { buildEvidencePack } from '../app/js/evidencepack.js';
+import { syntheticAuthority } from './fixtures/rfc3161-synthetic.mjs';
 import { sha256Hex, canonicalJson } from '../app/js/core.js';
 import { mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -39,8 +40,10 @@ const gather = {
   versions: [{ label: '1.0', seq: 1, status: 'approved', note: '', authorName: 'Micah', createdAt: '2026-08-01T10:00:00Z', snapshot }],
   signatures: [{ signerName: 'Kate', signerRole: 'Sponsor', signerEmailDomain: 'clientco.com', status: 'signed',
     sentAt: '2026-08-01T12:00:00Z', signedAt: '2026-08-01T13:00:00Z', docFingerprint: fp, versionSeq: 1, versionLabel: '1.0', receiptId: 'r-1' }],
+  // v3.1: the CLI reads the token, so the fixture carries a real one over
+  // this receipt's hash, from a synthetic authority (tests/fixtures).
   receipts: [{ receiptId: 'r-1', canonicalHash: canonHash, keyId: 'rk-cli', tsaStatus: 'single', sealedAt: '2026-08-01T13:01:00Z',
-    receiptJson, signatureBase64: sig, tsaPrimaryDer: 'AAECAwQFBgc=', tsaSecondaryDer: null, versionSeq: 1 }],
+    receiptJson, signatureBase64: sig, tsaPrimaryDer: syntheticAuthority().response(canonHash).toString('base64'), tsaSecondaryDer: null, versionSeq: 1 }],
   attachments: [], keys: [{ kid: 'rk-cli', publicKeySpkiBase64: spki }],
   chain: { ok: true, head_seq: 3, head_hash: 'ab'.repeat(32), unchained: 0 },
 };
@@ -61,7 +64,8 @@ const clean = join(base, 'clean'); writePack(clean);
   const r = runCli(clean);
   check('an untouched pack answers PACK-VERIFIED, exit 0', r.code === 0 && r.out.includes('PACK-VERIFIED'), r.out.split('\n').slice(-3));
   check('the receipt inside verified through the section 9 path', r.out.includes('SEALED-VERIFIED'));
-  check('the openssl ts command is printed for the .tsr', r.out.includes('openssl ts -verify -digest ' + canonHash));
+  check('the .tsr token is read and checked, and the chain-to-root openssl command is printed',
+    r.out.includes('tsa_primary.tsr: granted, imprint is this receipt') && r.out.includes('openssl ts -verify -digest ' + canonHash));
 }
 
 {

@@ -37,7 +37,7 @@ function cover(project, rj, practice) {
     (rj.signature && rj.signature.signerRole ? ', ' + esc(rj.signature.signerRole) : '') +
     ' on baseline ' + esc((rj.baseline && rj.baseline.label) || '') + '.</p>' +
     '<p>Verify offline: recompute the receipt hash and check the signature per docs/VERIFY.md section 9; ' +
-    'check each .tsr with the printed openssl ts command. The manifest lists every file with its SHA-256.</p>' +
+    'each .tsr token is read and checked by the verify tool and chained to a root with the printed openssl ts command. The manifest lists every file with its SHA-256.</p>' +
     '</body></html>\n';
 }
 

@@ -10,7 +10,7 @@
 
 import { esc, escA, APP_VERSION } from './core.js';
 
-export const COVERED_THROUGH = '3.0.1';
+export const COVERED_THROUGH = '3.1.0';
 
 export const TIER_LABELS = { plain: 'In plain sight', hood: 'Under the hood', work: 'Where it earns its keep' };
 export const TIER_ORDER = ['plain', 'hood', 'work'];
@@ -22,11 +22,11 @@ export const CAPABILITIES = [
   { id: 'approval-gate', tier: 'plain', title: 'Approvals advance the version', sinceVersion: '2.28.1',
     body: 'The first approval moves a draft into review, and the last one marks it Approved. No separate publish step, and never while an approver is pending.' },
   { id: 'esign', tier: 'plain', title: 'Signatures on the exact baseline', sinceVersion: '2.30.0', anchor: 'doc.share',
-    body: 'A sign link carries one baseline and its fingerprint. The signer sees what was agreed, types a name, and the record captures both.' },
+    body: 'A sign link carries one baseline and its fingerprint. The signer sees what was agreed, each requirement with its fit criterion, types a name, and the record captures both.' },
   { id: 'signer-archive', tier: 'plain', title: 'Signers keep an archive link', sinceVersion: '2.38.0',
     body: 'After signing, the same link becomes a permanent read-only archive of the signed baseline and its receipt. Nothing to install, nothing to lose.' },
   { id: 'sealed-receipts', tier: 'plain', title: 'Receipts sealed with dual timestamps', sinceVersion: '2.48.1',
-    body: 'Each acceptance receipt is signed with Ed25519 and timestamped by two independent RFC 3161 authorities, so its moment of existence is provable outside ReqPub.' },
+    body: 'Each acceptance receipt is signed with Ed25519 and timestamped by two independent RFC 3161 authorities. A reply is stored only when it carries the receipt hash, and the verify tool reads every token.' },
   { id: 'verify-anywhere', tier: 'plain', title: 'Verify without the platform', sinceVersion: '2.29.0',
     body: 'Every export restates its own recipe. The public verify page and a standalone CLI recompute the fingerprint from the file alone, offline, with nothing installed from ReqPub.' },
   { id: 'update-dashboard', tier: 'plain', title: 'Weekly updates with recipient threads', sinceVersion: '2.35.0', anchor: 'doc.updates',
@@ -37,6 +37,10 @@ export const CAPABILITIES = [
     body: 'Upload a PRD and the deterministic mapper places its sections into the worksheet for review. You approve every row before anything lands.' },
   { id: 'evidence-pack', tier: 'plain', title: 'One evidence pack per project', sinceVersion: '2.52.0',
     body: 'A manager exports the whole record as one zip: chronology, baselines, receipts, attachments manifest, chain result. A lawyer or auditor verifies it offline with one command.' },
+  { id: 'client-slots-esign', tier: 'plain', title: 'Client slots take e-signatures only', sinceVersion: '3.1.0',
+    body: 'An approval slot with no assigned teammate is filled by that person\u2019s own signature link, and by nothing a manager clicks. The firm never signs for the client.' },
+  { id: 'ears-check', tier: 'plain', title: 'Requirements are checked for EARS', sinceVersion: '3.1.0',
+    body: 'A requirement outside the five EARS shapes raises a warning that names the shape to write: When a trigger holds, the system shall respond.' },
   { id: 'practice-mode', tier: 'plain', title: 'Practice records rehearse safely', sinceVersion: '2.55.0',
     body: 'A practice project is a rehearsal, never evidence: immutable at creation, watermarked everywhere, silent to webhooks, refused by evidence packs, absent from the Book.' },
   { id: 'help-walkthroughs', tier: 'plain', title: 'Help that walks the room', sinceVersion: '2.40.0', anchor: 'help.beacon',
@@ -69,6 +73,10 @@ export const CAPABILITIES = [
     body: 'Anonymous and key-scoped endpoints admit calls through atomic counters, sixty per key per minute on MCP. A flood gets clean refusals, and every refusal is logged.' },
   { id: 'no-drift-gates', tier: 'hood', title: 'The docs gate the build', sinceVersion: '2.53.0',
     body: 'CI holds VERIFY.md, SPEC.md, the schemas, the CLI, and the implementation equal, byte for byte where stated. A drift in any one fails the release.' },
+  { id: 'nothing-derived-stored', tier: 'hood', title: 'Nothing computed under the seal', sinceVersion: '3.1.0',
+    body: 'A version snapshot holds what people wrote and the gate name. Readiness signals are computed on screen and on the gate packet at print time, never stored.' },
+  { id: 'row-provenance', tier: 'hood', title: 'Rows carry author and origin', sinceVersion: '3.1.0',
+    body: 'A row promoted from the Inbox is stamped server-side with its author and origin, once, at insert. An SME\u2019s words keep the SME\u2019s name; an agent draft stays marked agent.' },
   { id: 'no-model', tier: 'hood', title: 'No AI model inside', sinceVersion: '2.42.0',
     body: 'The intake mapper is deterministic and the platform calls no model API, provable by grep. What enters the record was typed, uploaded, or approved by a person.' },
   { id: 'honest-limit', tier: 'hood', title: 'What a fingerprint cannot prove', sinceVersion: '2.48.1',
@@ -88,7 +96,7 @@ export const CAPABILITIES = [
   { id: 'finance-recognition', tier: 'work', title: 'When finance needs the signatures', sinceVersion: '2.52.0',
     body: 'evidence.csv lists one row per signature with fingerprints, receipt hashes, and timestamps. Mapping to revenue recognition judgments belongs to the firm and its auditors; ReqPub asserts none.' },
   { id: 'client-signoff', tier: 'work', title: 'When the client signs scope', sinceVersion: '2.30.0',
-    body: 'Send the sign link on the approved baseline. The signer confirms the fingerprint they see, and the sealed receipt lands beside the version it covers.' },
+    body: 'Send the sign link on the approved baseline; the last baseline\u2019s signers are offered first. The signer confirms the fingerprint they see, and the sealed receipt lands beside the version it covers.' },
   { id: 'sme-input', tier: 'work', title: 'When experts hold the details', sinceVersion: '2.26.0',
     body: 'SME workspaces collect structured answers on their own durable links; contributions arrive attributed in the Inbox for promotion into the worksheet.' },
   { id: 'partner-followup', tier: 'work', title: 'When recipients go quiet', sinceVersion: '2.35.0',

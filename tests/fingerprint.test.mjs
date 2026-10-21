@@ -110,13 +110,14 @@ test('the incorporated list caps at twelve and counts the rest', () => {
 test('the gate packet composes name, criteria state, per-column changes, and the recipe', () => {
   const meta = { product: 'P', org: 'CV', label: '2.0', status: 'in_review', eyebrow: 'Requirements Baseline',
     fingerprint: 'c'.repeat(64),
-    snapHealth: [{ level: 'warn', count: 2, label: 'Approved versions with no named sign-off', detail: 'Add named approvers.' }] };
+    criteria: [{ level: 'warn', count: 2, label: 'Approved versions with no named sign-off', detail: 'Add named approvers.' }] };
   const cur = { fr: [{ _k: 1, stmt: 'Records a session', fit: 'within 30 seconds', pri: 'Must' }] };
   const prev = { fr: [{ _k: 1, stmt: 'Records a session', fit: 'within 5 seconds', pri: 'Must' }] };
   const md = gatePacketMd(meta, cur, prev, '1.0');
   assert.ok(md.includes('**Requirements Baseline**. A named decision on baseline v2.0'));
   assert.ok(md.includes('0 gaps · 1 warning'), 'the line counts signals; the row below carries the ×2');
   assert.ok(md.includes('Warning ×2: Approved versions with no named sign-off'));
+  assert.ok(md.includes('Computed from the baseline content and the project\u2019s current state when this packet was printed'), 'the packet says the state is computed, not stored');
   assert.ok(!md.includes('Version history'), 'in-app remedy copy stays out of the client-facing packet');
   assert.ok(md.includes('## Changes since v1.0'));
   assert.ok(md.includes('- fit criterion: ~~within 5 seconds~~ → within 30 seconds'));
@@ -127,15 +128,17 @@ test('the gate packet composes name, criteria state, per-column changes, and the
 test('the packet is honest when the gate is unnamed or the evidence predates capture', () => {
   const md = gatePacketMd({ product: 'P', label: '1.0', fingerprint: 'c'.repeat(64) }, { }, null, '');
   assert.ok(md.includes('carries no gate name'));
-  assert.ok(md.includes('No readiness evidence stored'));
+  assert.ok(md.includes('Not computed for this print'));
   assert.ok(md.includes('Initial baseline. There is no prior gate'));
 });
 
-test('the client report Verification section lists the stored record state', () => {
+test('the client report carries no computed record state: the signed document holds only what people wrote', () => {
   const md = clientDocMd({ ctrl_product: 'P' }, { product: 'P', label: '2.0', fingerprint: 'f'.repeat(64),
-    snapHealth: [{ level: 'gap', count: 1, label: 'Must requirement without a fit criterion' }] }, null, null, []);
-  assert.ok(md.includes('**Record state at baseline.** 1 gap · 0 warnings'));
-  assert.ok(md.includes('- Gap: Must requirement without a fit criterion'));
+    snapHealth: [{ level: 'gap', count: 1, label: 'Must requirement without a fit criterion' }],
+    criteria: [{ level: 'gap', count: 1, label: 'Must requirement without a fit criterion' }] }, null, null, []);
+  assert.ok(!md.includes('Record state'), 'a stored or passed health list never reaches the client report');
+  assert.ok(!md.includes('Must requirement without a fit criterion'));
+  assert.ok(md.includes('## Verification'), 'the fingerprint section stays');
 });
 
 test('the SOW exhibit derives every line from the record and leaves only bracketed fields for counsel', () => {

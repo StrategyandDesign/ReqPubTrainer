@@ -18,12 +18,38 @@ const clean = {
   ctrl_product: 'Acme', has_ai: 'No', vulnerable: 'No',
   sol_out: ['No mobile app in phase one'],
   components: [{ _k: 1, name: 'Core', owner: 'Jo', status: 'Active' }],
-  fr: [{ _k: 1, stmt: 'Does X', fit: 'X measured. Test.', pri: 'Must', comp: 'Core' }],
-  nfr: [{ _k: 1, stmt: 'P95 under 200ms', fit: 'Load test.', pri: 'Should', comp: 'Core' }]
+  fr: [{ _k: 1, stmt: 'When a user saves, the system shall do X.', fit: 'X measured. Test.', pri: 'Must', comp: 'Core' }],
+  nfr: [{ _k: 1, stmt: 'The system shall answer at P95 under 200ms.', fit: 'Load test.', pri: 'Should', comp: 'Core' }]
 };
 
 test('a clean record raises no signals', () => {
   assert.deepEqual(healthSignals(clean, {}), []);
+});
+
+test('a requirement outside the EARS shapes is a warning, counted across FR and NFR, and never a gap', () => {
+  const a = { ...clean,
+    fr: [...clean.fr, { _k: 2, stmt: 'Handles errors gracefully', fit: 'ok', pri: 'Must', comp: 'Core' }],
+    nfr: [...clean.nfr, { _k: 2, stmt: 'P95 under 200ms', fit: 'ok', pri: 'Should', comp: 'Core' }] };
+  const s = get(healthSignals(a, {}), 'req_not_ears');
+  assert.equal(s.level, 'warn');
+  assert.equal(s.count, 2);
+  assert.ok(s.detail.includes('the system shall'));
+});
+
+test('every EARS shape passes the check and a blank statement raises nothing', () => {
+  const a = { ...clean, fr: [
+    { _k: 1, stmt: 'The system shall persist a session for 30 minutes.', fit: 'ok', pri: 'Must', comp: 'Core' },
+    { _k: 2, stmt: 'When a save fails, the system shall show a retry within two seconds.', fit: 'ok', pri: 'Must', comp: 'Core' },
+    { _k: 3, stmt: 'While the agent is drafting, the system shall lock the row.', fit: 'ok', pri: 'Must', comp: 'Core' },
+    { _k: 4, stmt: 'Where a client enables webhooks, the system shall sign each delivery.', fit: 'ok', pri: 'Must', comp: 'Core' },
+    { _k: 5, stmt: 'If the fingerprint differs, then the system shall refuse the seal.', fit: 'ok', pri: 'Must', comp: 'Core' },
+    { _k: 6, stmt: '', fit: '', pri: 'Could', comp: 'Core' },
+    { _k: 7, stmt: 'ReqPub shall refuse a seal when the fingerprint differs.', fit: 'ok', pri: 'Must', comp: 'Core' },
+    { _k: 8, stmt: 'When a user clicks Save, ReqPub shall persist the row.', fit: 'ok', pri: 'Must', comp: 'Core' }
+  ] };
+  assert.equal(get(healthSignals(a, {}), 'req_not_ears'), undefined, 'a record that names its system is in shape too');
+  const pronoun = { ...clean, fr: [{ _k: 1, stmt: 'It shall work', fit: 'ok', pri: 'Must', comp: 'Core' }] };
+  assert.equal(get(healthSignals(pronoun, {}), 'req_not_ears').count, 1, 'a pronoun is not a subject');
 });
 
 test('a Must requirement without a fit criterion is a gap, counted across FR and NFR', () => {

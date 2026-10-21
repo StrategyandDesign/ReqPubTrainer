@@ -63,7 +63,7 @@ export const TEMPLATES = [
       ],
       components: [{ name: 'Core', owner: 'to confirm', status: 'Planned', desc: 'to confirm' }],
       metrics: [{ metric: 'to confirm', target: 'to confirm', method: 'to confirm' }],
-      fr: [{ stmt: 'When the user does X, the system does Y.', fit: 'to confirm. The measurable acceptance condition. End with Test, Inspection, or Demonstration.', pri: 'Must', comp: 'Core' }],
+      fr: [{ stmt: 'When the user does X, the system shall do Y.', fit: 'to confirm. The measurable acceptance condition. End with Test, Inspection, or Demonstration.', pri: 'Must', comp: 'Core' }],
       nfr: [{ stmt: 'to confirm. A quality requirement with a number', fit: 'to confirm', pri: 'Must', comp: 'Core' }]
     }
   },

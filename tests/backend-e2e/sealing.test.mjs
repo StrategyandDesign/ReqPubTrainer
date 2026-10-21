@@ -40,6 +40,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0004_chain.sql')));
   await run(sql(rel('../../supabase/migrations/0021_sealing.sql')));
   await run(sql(rel('../../supabase/migrations/0021_sealing.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('migrations/0021_sealing.sql applies twice on top of schema.sql and migrations/0004_chain.sql', true);
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@cv.co'),('${RIVAL}','rival@other.co')`);
@@ -62,7 +63,8 @@ try {
   check('seal_context carries no token', JSON.stringify(sc.c).indexOf('tok-signed') === -1);
 
   /* ---- store: happy path, member authority ---- */
-  const st = await one(`select receipt_store('${SR}', '', '{"format":"reqpub-receipt"}'::jsonb, 'HASHabc', 'SIGabc', 'acc-1') as r`);
+  const HASH = 'ab'.repeat(32);   // a real seal stores the canonical SHA-256 as hex
+  const st = await one(`select receipt_store('${SR}', '', '{"format":"reqpub-receipt"}'::jsonb, '${HASH}', 'SIGabc', 'acc-1') as r`);
   check('receipt_store seals a signed request for a member', st.r.existing === false && !!st.r.id);
   const act = await one(`select count(*)::int n from activity where action='seal.issued' and project_id='p1'`);
   check('sealing writes a seal.issued activity row (which the chain links)', act.n === 1);
@@ -71,7 +73,7 @@ try {
 
   /* ---- idempotence ---- */
   const st2 = await one(`select receipt_store('${SR}', '', '{"format":"x"}'::jsonb, 'OTHER', 'OTHER', 'acc-1') as r`);
-  check('resealing returns the existing receipt, unchanged', st2.r.existing === true && st2.r.canonical_hash === 'HASHabc');
+  check('resealing returns the existing receipt, unchanged', st2.r.existing === true && st2.r.canonical_hash === HASH);
 
   /* ---- refusals ---- */
   const unsigned = await tryQ(`select receipt_store('${SR2}', '', '{}'::jsonb, 'h', 's', 'acc-1')`);
@@ -82,13 +84,34 @@ try {
   const revoked = await tryQ(`select receipt_store('${SR2}', '', '{}'::jsonb, 'h', 's', 'acc-1')`);
   check('sealing a revoked request is refused', !!revoked.error && revoked.error.includes('revoked'));
 
-  /* ---- tsa upgrade never downgrades ---- */
-  const t1 = await one(`select receipt_tsa_update('${st.r.id}', '', 'PRIMARYder', null) as r`);
-  check('one timestamp yields single', t1.r.tsa_status === 'single');
-  const t2 = await one(`select receipt_tsa_update('${st.r.id}', '', null, 'SECONDARYder') as r`);
-  check('the second timestamp yields dual', t2.r.tsa_status === 'dual');
+  /* ---- tsa replies are checked, then upgrade never downgrades ---- */
+  // v3.1: receipt_tsa_update stores a reply only when it is a DER SEQUENCE
+  // whose PKIStatus reads granted and whose bytes carry this receipt's hash,
+  // the shape of a real RFC 3161 TimeStampResp. Anything else is refused.
+  const reply = (status, hashHex, variant = 1) => {
+    const body = Buffer.concat([Buffer.from([0x30, 0x03, 0x02, 0x01, status]), Buffer.from([0x04, 0x20]), Buffer.from(hashHex, 'hex'), Buffer.from([0x02, 0x01, variant])]);
+    return Buffer.concat([Buffer.from([0x30, body.length]), body]).toString('base64');
+  };
+  const garbage = await tryQ(`select receipt_tsa_update('${st.r.id}', '', 'PRIMARYder', null)`);
+  check('a reply that is not DER is refused', !!garbage.error && /does not cover/.test(garbage.error));
+  const wrongHash = await tryQ(`select receipt_tsa_update('${st.r.id}', '', '${reply(0, 'cd'.repeat(32))}', null)`);
+  check('a granted reply for a different hash is refused', !!wrongHash.error && /does not cover/.test(wrongHash.error));
+  const rejected = await tryQ(`select receipt_tsa_update('${st.r.id}', '', '${reply(2, HASH)}', null)`);
+  check('a reply whose status is rejection is refused even with the right hash', !!rejected.error);
+  check('the refusals left the status pending', (await one(`select tsa_status from acceptance_receipts where id='${st.r.id}'`)).tsa_status === 'pending');
+  const t1 = await one(`select receipt_tsa_update('${st.r.id}', '', '${reply(0, HASH)}', null) as r`);
+  check('one granted reply carrying this hash yields single', t1.r.tsa_status === 'single');
+  const t2 = await one(`select receipt_tsa_update('${st.r.id}', '', null, '${reply(1, HASH)}') as r`);
+  check('the second reply (granted with modifications) yields dual', t2.r.tsa_status === 'dual');
   const t3 = await one(`select receipt_tsa_update('${st.r.id}', '', null, null) as r`);
   check('a null-null update never downgrades from dual', t3.r.tsa_status === 'dual');
+  // Write once: a stored reply is evidence. A later well-formed reply for the
+  // same slot is ignored, so a sign-link holder cannot replace a genuine
+  // token with a fabrication that passes the shape check.
+  const firstDer = (await one(`select tsa_primary_der from acceptance_receipts where id='${st.r.id}'`)).tsa_primary_der;
+  const over = await one(`select receipt_tsa_update('${st.r.id}', '', '${reply(0, HASH, 2)}', null) as r`);
+  const afterDer = (await one(`select tsa_primary_der from acceptance_receipts where id='${st.r.id}'`)).tsa_primary_der;
+  check('a stored timestamp reply is never overwritten by a later one', over.r.tsa_status === 'dual' && afterDer === firstDer && afterDer !== reply(0, HASH, 2));
 
   /* ---- reader boundary ---- */
   const rf = await one(`select receipt_for('${SR}', '') as r`);

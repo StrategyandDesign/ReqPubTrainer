@@ -141,7 +141,7 @@ export const HELP_LIBRARY = [
   {
     title: 'Write a requirement that can be tested',
     routes: ['workspace'], audience: 'all', sort_order: 210,
-    body_md: 'The shape that works: when X happens, the system does Y, within Z.\n\n**Weak.** The system should handle errors gracefully. Nobody can test graceful.\n\n**Strong.** When a save fails, the system shows a retry within two seconds and records no completion. A trigger, a behavior, a bound. Anyone can test it, which means anyone can sign it.\n\nOne requirement per row. If your statement contains and, it is usually two promises hiding in one line, and the second one will be the one that slips.\n\n**Do next.** Find a row containing the word appropriately, gracefully, or robust. Rewrite it with a trigger and a bound.',
+    body_md: 'The shape that works is EARS: when X happens, the system shall do Y, within Z.\n\n**Weak.** The system should handle errors gracefully. Nobody can test graceful.\n\n**Strong.** When a save fails, the system shall show a retry within two seconds and record no completion. A trigger, a behavior, a bound. The record warns on any requirement outside that shape. Anyone can test it, which means anyone can sign it.\n\nOne requirement per row. If your statement contains and, it is usually two promises hiding in one line, and the second one will be the one that slips.\n\n**Do next.** Find a row containing the word appropriately, gracefully, or robust. Rewrite it with a trigger and a bound.',
     steps: [],
   },
   {

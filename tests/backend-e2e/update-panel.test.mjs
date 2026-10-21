@@ -46,6 +46,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0017_update_panel.sql')));
   await run(sql(rel('../../supabase/migrations/0017_update_panel.sql')));
   await run(sql(rel('../../supabase/migrations/0018_updates.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('the live-DB patches leave exactly one update_publish and one update_comment',
     +(await one(`select count(*) c from pg_proc where proname in ('update_publish','update_comment')`)).c === 2);
 

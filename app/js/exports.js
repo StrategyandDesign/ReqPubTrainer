@@ -27,9 +27,6 @@ export function coverHTML(meta) {
     meta.org ? ['Prepared by', meta.org] : null,
     [meta.baselined ? 'Baselined' : 'Date', fmtDay(meta.baselined || new Date())],
     meta.approvedAt ? ['Approved', fmtDay(meta.approvedAt)] : null,
-    // The record's state when it was fixed. Stored inside the snapshot at
-    // generation, so two prints of one baseline carry the same evidence.
-    Array.isArray(meta.snapHealth) ? ['Record state', healthStateLine(meta.snapHealth)] : null,
     // The baseline fingerprint identifies the exact snapshot this document was
     // produced from (full value + recipe in the Verification section).
     meta.fingerprint ? ['Fingerprint', fmtFingerprint(meta.fingerprint)] : null,
@@ -218,10 +215,6 @@ export function clientDocMd(answers, meta, briefAnswers, briefSections, versions
         ['Fingerprint (SHA-256)', '`' + meta.fingerprint + '`'],
         ['Recipe', 'SHA-256 over the canonical JSON (object keys sorted, arrays in order, UTF-8) of {label, seq, snapshot} for this version, as stored.']
       ]) +
-      (Array.isArray(meta.snapHealth)
-        ? '\n\n**Record state at baseline.** ' + healthStateLine(meta.snapHealth) +
-          (meta.snapHealth.length ? '\n\n' + meta.snapHealth.map((x) => '- ' + (x.level === 'gap' ? 'Gap' : 'Warning') + (x.count > 1 ? ' ×' + x.count : '') + ': ' + x.label).join('\n') : '')
-        : '') +
       '\n\nTwo exports carrying the same fingerprint were produced from byte-identical baselines. ' +
       'The fingerprint identifies the exact snapshot; it is not a signature or a trusted timestamp.' +
       (meta.presentLink ? '\n\nRead-only record: ' + meta.presentLink : ''));
@@ -234,8 +227,9 @@ export function clientDocMd(answers, meta, briefAnswers, briefSections, versions
 /* The gate packet: the artifact that walks into a steering committee. A gate
    is a named decision, by named deciders, against stated criteria, on a fixed
    artifact - this composes all four from what already exists: the gate name
-   (cover eyebrow), the record's state when it was fixed (snapshot.health),
-   the per-column evidence diff since the prior baseline (reqDiffDetail), the
+   (cover eyebrow), the criteria state computed when the packet is printed
+   (never stored in the snapshot, so the signed artifact carries no value a
+   person did not write), the per-column evidence diff since the prior baseline (reqDiffDetail), the
    named approvals (cover rail), and the fingerprint with its recipe. When the
    committee decides on this packet, the gate decision has moved to the
    record. Pure composition; the tracker keeps its dashboards. */
@@ -245,13 +239,14 @@ export function gatePacketMd(meta, curAnswers, prevAnswers, prevLabel) {
     (meta.eyebrow ? '**' + meta.eyebrow + '**. A named decision on baseline v' + meta.label + '.'
                   : 'A gate decision on baseline v' + meta.label + '. (This baseline carries no gate name; name the gate when generating to put it on the cover.)') +
     ' The named deciders and their sign-off state are on the cover; the fingerprint below identifies the exact artifact being decided on.');
-  if (Array.isArray(meta.snapHealth)) {
-    P.push('## Criteria state at this baseline\n\n' + healthStateLine(meta.snapHealth) +
-      (meta.snapHealth.length
-        ? '\n\n' + meta.snapHealth.map((x) => '- ' + (x.level === 'gap' ? 'Gap' : 'Warning') + (x.count > 1 ? ' ×' + x.count : '') + ': ' + x.label).join('\n')
-        : '\n\nNo readiness gaps or warnings were present when this baseline was fixed.'));
+  if (Array.isArray(meta.criteria)) {
+    P.push('## Criteria state at this baseline\n\n' + healthStateLine(meta.criteria) +
+      (meta.criteria.length
+        ? '\n\n' + meta.criteria.map((x) => '- ' + (x.level === 'gap' ? 'Gap' : 'Warning') + (x.count > 1 ? ' ×' + x.count : '') + ': ' + x.label).join('\n')
+        : '\n\nNo readiness gaps or warnings are present in this baseline.') +
+      '\n\n_Computed from the baseline content and the project\u2019s current state when this packet was printed. The baseline stores no readiness state; the fingerprint covers what people wrote._');
   } else {
-    P.push('## Criteria state at this baseline\n\n_No readiness evidence stored. This baseline predates evidence capture. Regenerate to carry it._');
+    P.push('## Criteria state at this baseline\n\n_Not computed for this print._');
   }
   if (prevAnswers) {
     const rd = reqDiff(prevAnswers, curAnswers || {});

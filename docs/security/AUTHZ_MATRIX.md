@@ -86,6 +86,7 @@ unless it appears with a role below, and the suite fails on any drift.
 | `projects_practice_guard()` | no |  |  |
 | `receipt_for(uuid, text)` | yes | yes | yes |
 | `receipt_store(uuid, text, jsonb, text, text, text)` | yes | yes | yes |
+| `receipt_tsa_covers(text, text)` | no |  |  |
 | `receipt_tsa_update(uuid, text, text, text)` | yes | yes | yes |
 | `receipts_for_project(text)` | yes |  | yes |
 | `record_template_delete(uuid)` | yes |  | yes |
@@ -119,7 +120,7 @@ unless it appears with a role below, and the suite fails on any drift.
 | `update_thread_create(text, text, text, text)` | yes | yes | yes |
 | `update_thread_reply(text, uuid, text)` | yes | yes | yes |
 | `updates_next_id(text, text)` | yes |  | yes |
-| `upsert_row(text, text, uuid, jsonb, double precision, integer)` | yes |  | yes |
+| `upsert_row(text, text, uuid, jsonb, double precision, integer, uuid)` | yes |  | yes |
 | `url_token(integer)` | no |  |  |
 | `v2_context()` | yes |  | yes |
 | `verify_project_chain(text)` | yes |  | yes |
@@ -138,4 +139,4 @@ unless it appears with a role below, and the suite fails on any drift.
 | `webhook_on_seal()` | yes |  |  |
 | `webhook_on_sign()` | yes |  |  |
 
-Totals: 130 functions, 17 reachable by anon, 79 reachable by authenticated.
+Totals: 131 functions, 17 reachable by anon, 79 reachable by authenticated.

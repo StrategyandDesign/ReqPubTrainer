@@ -67,6 +67,10 @@ check('determinism: two builds of one record are byte-identical', buildRecordOfD
 check('every timestamp status has words that claim exactly what happened',
   tsaLine('dual').includes('two independent') && tsaLine('primary').includes('one authority')
   && tsaLine('none').includes('no timestamp authority responded') && tsaLine(undefined).includes('no timestamp'));
+check('the stored vocabulary single and pending read as what they prove, not as raw status words',
+  tsaLine('single') === 'sealed and timestamped by one authority'
+  && tsaLine('pending') === 'sealed; no timestamp authority responded'
+  && !tsaLine('single').includes('status') && !tsaLine('pending').includes('status'));
 
 /* ---- empty states ---- */
 {

@@ -55,6 +55,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0018_updates.sql')));
   await run(sql(rel('../../supabase/migrations/0020_weekly_update.sql')));
   await run(sql(rel('../../supabase/migrations/0020_weekly_update.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('the patch applies twice on top of schema.sql without error, and one of each function remains',
     +(await one(`select count(*) c from pg_proc where proname in
       ('update_publish','updates_next_id','update_note_save','update_thread_create','update_thread_reply','update_context')`)).c === 6);

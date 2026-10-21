@@ -207,7 +207,7 @@ export const repo = {
   async projectBundle(pid) {
     const [fields, rows, versions, comms, requests, discovery, reads] = await Promise.all([
       durable(() => sb.from('project_fields').select('field_id,value,rev,updated_by_name,updated_at').eq('project_id', pid)),
-      durable(() => sb.from('field_rows').select('id,field_id,k,data,pos,rev,updated_by_name').eq('project_id', pid).eq('deleted', false).order('pos')),
+      durable(() => sb.from('field_rows').select('id,field_id,k,data,pos,rev,updated_by_name,author_name,origin').eq('project_id', pid).eq('deleted', false).order('pos')),
       durable(() => sb.from('versions').select('id,seq,label,status,note,author_name,build,created_at').eq('project_id', pid).order('seq')),
       durable(() => sb.from('comms').select('*').eq('project_id', pid).order('created_at', { ascending: false })),
       durable(() => sb.from('input_requests').select('*').eq('project_id', pid).order('created_at', { ascending: false })),
@@ -258,8 +258,10 @@ export const repo = {
   saveField(pid, fieldId, value, baseRev) {
     return rpc('save_field', { p_project: pid, p_field: fieldId, p_value: value, p_base_rev: baseRev || 0 });
   },
-  upsertRow(pid, fieldId, id, data, pos, baseRev) {
-    return rpc('upsert_row', { p_project: pid, p_field: fieldId, p_id: id, p_data: data, p_pos: pos ?? null, p_base_rev: baseRev ?? null });
+  // source: the Inbox comm a new row is promoted from. The server copies that
+  // comm's author and origin onto the row; the client never asserts them.
+  upsertRow(pid, fieldId, id, data, pos, baseRev, source) {
+    return rpc('upsert_row', { p_project: pid, p_field: fieldId, p_id: id, p_data: data, p_pos: pos ?? null, p_base_rev: baseRev ?? null, p_source: source || null });
   },
   deleteRow(pid, id) { return rpc('delete_row', { p_project: pid, p_id: id }); },
   createVersion(pid, major, note, snapshot, build) {
@@ -603,11 +605,19 @@ export function buildSharePayload(project, answers, versionLabel, seq, kind, bui
   // requirement grouping needs component names even when components is not shared.
   if (secs.includes('pieces')) ca.components = filled(answers.components).map((c) => ({ name: c.name, desc: c.desc }));
   // AI acceptance is deliberate disclosure: the client signs {dimension,
-  // metric, threshold}. Component tags do not ride along, and the FR fit
-  // doctrine is untouched - fit criteria never appear in any payload.
+  // metric, threshold}. Component tags do not ride along.
   if (secs.includes('aieval')) ca.eval = filled(answers.eval).map((r) => ({ dim: r.dim || '', metric: r.metric || '', thresh: r.thresh || '', dataset: r.dataset || '' }));
   if (secs.includes('willdo')) {
-    ca.fr = (answers.fr || []).map((x) => ({ stmt: x.stmt || '', comp: x.comp || '' }));
+    // Two disclosures. A brief (an SME or partner reviewing scope, and the
+    // presentation link built from it) carries statements only. The
+    // signature page and the client's printed baseline report (kind
+    // 'present') carry each requirement's fit criterion and who executes
+    // it, because a signature over a fingerprint must cover the pass
+    // condition the signer is attesting to; until v3.1 the signer confirmed
+    // a hash over text they could not see.
+    ca.fr = (answers.fr || []).map((x) => kind === 'present'
+      ? { stmt: x.stmt || '', comp: x.comp || '', fit: x.fit || '', exec: x.exec || '' }
+      : { stmt: x.stmt || '', comp: x.comp || '' });
     if (!secs.includes('pieces')) ca.components = filled(answers.components).map((c) => ({ name: c.name }));
   }
   // The assigned collaborator logo travels with the brief so accountless SMEs

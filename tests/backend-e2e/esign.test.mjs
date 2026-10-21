@@ -39,6 +39,7 @@ try {
   // The standalone live-DB migration must be idempotent on top of the schema.
   await run(sql(rel('../../supabase/migrations/0007_esign.sql')));
   await run(sql(rel('../../supabase/migrations/0007_esign.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
 
   await run(`insert into auth.users(id,email) values
     ('${MGR}','mgr@collection.co'),('${VIEW}','viewer@collection.co'),('${RIVAL}','rival@other.co')`);
@@ -96,9 +97,14 @@ try {
   const again = (await one(`select sign_request_sign('${made.token}','Someone Else','UA2') r`)).r;
   check('signing twice is idempotent and keeps the first signature',
     again.ok === true && again.already === true && again.signedName === 'Dana Whitfield', again);
+  // v3.1: the signature advances the version itself. With no other slot
+  // pending, the version is approved the moment the signature lands.
+  check('the signature reports the version it approved', signed.versionStatus === 'approved', signed);
   await asUser(MGR);
-  check('the approve gate accepts the e-signed slot like any other',
-    (await one(`select version_set_status('${V}','approved') r`)).r.ok === true);
+  check('the version row is approved by the signature, with no manager click',
+    (await one(`select status from versions where id='${V}'`)).status === 'approved');
+  check('the transition is logged as via esign',
+    (await one(`select count(*)::int c from activity where entity_id='${V}' and action='version.status' and meta->>'via'='esign'`)).c === 1);
 
   console.log('- decline and revoke are terminal, honest states -');
   const V2 = (await one(`insert into versions(project_id,seq,label,status,snapshot) values

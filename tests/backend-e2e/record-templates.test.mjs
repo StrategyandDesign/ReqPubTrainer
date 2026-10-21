@@ -36,6 +36,7 @@ try {
   await run(sql(rel('../../supabase/schema.sql')));
   // Prove the standalone migration is idempotent on top of the base schema.
   await run(sql(rel('../../supabase/migrations/0015_record_templates.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
 
   await run(`insert into auth.users(id,email) values
     ('${MGR}','mgr@collection.co'),('${MEM}','mem@collection.co'),('${RIVAL}','rival@other.co')`);

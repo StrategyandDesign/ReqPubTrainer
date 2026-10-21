@@ -39,6 +39,7 @@ try {
   await run(sql(rel('../../supabase/schema.sql')));
   await run(sql(rel('../../supabase/migrations/0004_chain.sql')));
   await run(sql(rel('../../supabase/migrations/0021_sealing.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@victim.co'),('${MEM}','mem@victim.co'),('${ATT}','attacker@evil.co')`);
   await run(`insert into orgs(id,name,created_by) values ('${ORG}','Victim Co','${MGR}'),('${AORG}','Evil Co','${ATT}')`);
@@ -55,7 +56,7 @@ try {
     values ('${ASR}','${AORG}','ap','cccccccc-0000-0000-0000-00000000ed21','attacker-token','x@evil.co','Att','signed','afp','Att',now())`);
   // one legitimately sealed victim receipt to attack
   await run(`set role authenticated`); await asUser(MGR);
-  const seal = await one(`select receipt_store('${SR}','', '{"format":"reqpub-receipt","secret":"victim"}'::jsonb, 'VICTIMHASH', 'VICTIMSIG', 'acc-1') as r`);
+  const seal = await one(`select receipt_store('${SR}','', '{"format":"reqpub-receipt","secret":"victim"}'::jsonb, 'babababababababababababababababababababababababababababababababa', 'VICTIMSIG', 'acc-1') as r`);
   const RID = seal.r.id;
 
   /* ============ THREAT 1: cross-tenant read (steal a competitor's receipt) ============ */
@@ -87,7 +88,7 @@ try {
   attack('attacker seals a fresh forged receipt on the victim request (no token, no membership)', !!t3a.error);
   // With the stolen token, can a rival-org user still not overwrite?
   const t3b = await one(`select receipt_store('${SR}','victim-secret-token', '{"forged":true}'::jsonb, 'FORGED2', 'FORGEDSIG2', 'acc-1') as r`);
-  attack('stolen token lets attacker overwrite the sealed receipt content', t3b.r.existing === true && t3b.r.canonical_hash === 'VICTIMHASH', t3b.r);
+  attack('stolen token lets attacker overwrite the sealed receipt content', t3b.r.existing === true && t3b.r.canonical_hash === 'babababababababababababababababababababababababababababababababa', t3b.r);
 
   /* ============ THREAT 4: tamper a stored receipt in place ============ */
   const t4a = await tryQ(`update acceptance_receipts set canonical_hash='SWAPPED', signature_base64='SWAP' where id='${RID}'`);
@@ -110,6 +111,13 @@ try {
   await asUser(MGR);
   const t6c = await one(`select tsa_status from acceptance_receipts where id='${RID}'`);
   attack('the failed escalation left the timestamp status changed', t6c.tsa_status === 'pending');
+  // v3.1: a member of the victim's own project, who passes the authority
+  // check, still cannot mark the receipt dual with bytes that are not a
+  // granted reply carrying this receipt's hash.
+  const t6d = await tryQ(`select receipt_tsa_update('${RID}','','RkFLRQ==','RkFLRQ==')`);
+  attack('a project member marks the receipt dual with arbitrary bytes', !!t6d.error);
+  const t6e = await one(`select tsa_status from acceptance_receipts where id='${RID}'`);
+  attack('the member\u2019s garbage changed the timestamp status', t6e.tsa_status === 'pending');
   await asUser(ATT);
 
   /* ============ THREAT 7: chain-cut, hide a seal from the trail ============ */

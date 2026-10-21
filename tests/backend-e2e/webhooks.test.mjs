@@ -46,6 +46,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0022_attachment_hash.sql')));
   await run(sql(rel('../../supabase/migrations/0023_webhooks.sql')));
   await run(sql(rel('../../supabase/migrations/0023_webhooks.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('migrations/0023_webhooks.sql applies twice on the full prior stack', true);
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@cv.co'),('${MEMBER}','viewer@cv.co'),('${OUTSIDER}','x@rival.co')`);
@@ -111,10 +112,16 @@ try {
   check('the receipt seals', !!stored.j.id, stored.j);
   const d3 = await one(`select id, payload from webhook_deliveries where event_type='seal.issued' and payload->>'signRequestId'='${sr.j.id}'`);
   check('sealing enqueues seal.issued carrying the receiptId', !!d3 && d3.payload.receiptId === stored.j.id, d3 && d3.payload);
-  await one(`select receipt_tsa_update('${stored.j.id}','','${'cd'.repeat(20)}',null) j`);
+  // v3.1: a reply is stored only when it is a granted RFC 3161 response
+  // carrying this receipt's hash; the webhook fires on the status change.
+  const reply = (hashHex) => {
+    const body = Buffer.concat([Buffer.from([0x30, 0x03, 0x02, 0x01, 0x00, 0x04, 0x20]), Buffer.from(hashHex, 'hex')]);
+    return Buffer.concat([Buffer.from([0x30, body.length]), body]).toString('base64');
+  };
+  await one(`select receipt_tsa_update('${stored.j.id}','','${reply('ab'.repeat(32))}',null) j`);
   const d4 = await one(`select count(*)::int n from webhook_deliveries where event_type='seal.timestamped' and payload->>'receiptId'='${stored.j.id}'`);
   check('the first timestamp upgrade enqueues seal.timestamped once', d4.n === 1, d4);
-  await one(`select receipt_tsa_update('${stored.j.id}','',null,'${'ef'.repeat(20)}') j`);
+  await one(`select receipt_tsa_update('${stored.j.id}','',null,'${reply('ab'.repeat(32))}') j`);
   const d5 = await one(`select count(*)::int n from webhook_deliveries where event_type='seal.timestamped' and payload->>'receiptId'='${stored.j.id}'`);
   check('single to dual does not enqueue a second timestamp event', d5.n === 1, d5);
   await run('reset role');

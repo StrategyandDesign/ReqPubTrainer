@@ -48,6 +48,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0021_sealing.sql')));
   await run(sql(rel('../../supabase/migrations/0022_attachment_hash.sql')));
   await run(sql(rel('../../supabase/migrations/0022_attachment_hash.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('migrations/0022_attachment_hash.sql applies twice on schema.sql + fix-chain + fix-sealing', true);
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@cv.co'),('${MEMBER}','viewer@cv.co'),('${OUTSIDER}','x@other.co')`);

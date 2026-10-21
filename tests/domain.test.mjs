@@ -1,8 +1,9 @@
 /* ReqPub v2 - domain tests (node tests/domain.test.mjs) */
 import assert from 'node:assert/strict';
+import { buildSharePayload } from '../app/js/data.js';
 import {
   Q, SECTIONS, isAnswered, assembleAnswers, buildSections, assemble,
-  mdToHtml, bBrief, reqDiff, changeNote, execSummaryData, suggestFit, mdTable, reqDiffDetail, rowsFilled } from '../app/js/domain.js';
+  mdToHtml, bBrief, reqDiff, changeNote, execSummaryData, suggestFit, mdTable, reqDiffDetail, rowsFilled, priorSigners } from '../app/js/domain.js';
 
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('  ✓ ' + name); };
@@ -133,17 +134,22 @@ test('isAnswered treats empty rows and blank lists as unanswered', () => {
   assert.equal(isAnswered(qList, ['goal']), true);
 });
 
-test('bBrief exposes plain-language content, never fit criteria', () => {
+test('bBrief prints what the payload carries: a brief payload has no fit, a signature payload does', () => {
   const a = assembleAnswers(
     { ov_vision: { value: 'V' }, sol_solution: { value: 'S' } },
     {
       fr: [{ id: 'r', k: 1, data: { stmt: 'Does X', fit: 'SECRET internal fit criterion' }, pos: 1, rev: 1 }],
       sol_out: [{ id: 'o', k: 1, data: { text: 'Not doing Z' }, pos: 1, rev: 1 }]
     });
-  const md = bBrief(a);
-  assert.ok(md.includes('Does X'));
-  assert.ok(md.includes('Not in scope'));
-  assert.ok(!md.includes('SECRET'));
+  // The disclosure decision lives in buildSharePayload (data.js). A brief for
+  // an SME strips fit; a presentation or signature payload carries it, so the
+  // signature covers the pass condition. bBrief itself renders either shape.
+  const brief = bBrief(buildSharePayload({ name: 'P' }, a, '1.0', 1, 'brief', '', ['willdo', 'oos', 'building']).answers);
+  assert.ok(brief.includes('Does X'));
+  assert.ok(brief.includes('Not in scope'));
+  assert.ok(!brief.includes('SECRET'));
+  const signed = bBrief(buildSharePayload({ name: 'P' }, a, '1.0', 1, 'present', '', null).answers);
+  assert.ok(signed.includes('Does X **Fit:** SECRET internal fit criterion'));
 });
 
 test('suggestFit drafts a measurable skeleton from the statement', () => {
@@ -228,12 +234,52 @@ test('reqDiffDetail covers EVAL thresholds - the number a client signs', () => {
   assert.deepEqual(d[0].changes, [{ col: 'thresh', label: 'threshold', from: 'at least 90%', to: 'at least 95%' }]);
 });
 
+test('reqDiffDetail covers the eval set - a threshold moved to a friendlier sample is a change the diff must show', () => {
+  const prev = { eval: [{ _k: 4, dim: 'Hallucination guardrail', metric: 'Grounded rate', thresh: 'at least 95%', dataset: 'Labeled set of 500 transcripts' }] };
+  const cur = { eval: [{ _k: 4, dim: 'Hallucination guardrail', metric: 'Grounded rate', thresh: 'at least 95%', dataset: 'Labeled set of 50 transcripts' }] };
+  const d = reqDiffDetail(prev, cur);
+  assert.equal(d.length, 1);
+  assert.deepEqual(d[0].changes, [{ col: 'dataset', label: 'eval set', from: 'Labeled set of 500 transcripts', to: 'Labeled set of 50 transcripts' }]);
+});
+
+/* ---- prior signers ---- */
+test('priorSigners carries the signers of the last signed baseline forward, and only them', () => {
+  const versions = [{ id: 'v1', seq: 1, label: '1.0' }, { id: 'v2', seq: 2, label: '1.1' }, { id: 'v3', seq: 3, label: '2.0' }];
+  const signs = [
+    { version_id: 'v1', signer_email: 'Ann@Client.com', signer_name: 'Ann', signed_name: 'Ann Lee', signer_role: 'Sponsor', status: 'signed', revoked: false },
+    { version_id: 'v1', signer_email: 'bob@client.com', signer_name: '', signed_name: 'Bob', signer_role: '', status: 'signed', revoked: false },
+    { version_id: 'v1', signer_email: 'ann@client.com', signer_name: 'Ann', signed_name: 'Ann Lee', signer_role: 'Sponsor', status: 'signed', revoked: false },
+    { version_id: 'v1', signer_email: 'cy@client.com', signer_name: 'Cy', signed_name: '', signer_role: 'Ops', status: 'declined', revoked: false },
+    { version_id: 'v2', signer_email: 'dee@client.com', signer_name: 'Dee', signed_name: '', signer_role: 'Ops', status: 'pending', revoked: false },
+    { version_id: 'v2', signer_email: 'eve@client.com', signer_name: 'Eve', signed_name: 'Eve', signer_role: 'Ops', status: 'signed', revoked: true }
+  ];
+  // v3's nearest earlier version with a live signature is v1 (v2 holds only a pending and a revoked request).
+  assert.deepEqual(priorSigners(signs, versions, 'v3'), [
+    { email: 'ann@client.com', name: 'Ann Lee', role: 'Sponsor', label: '1.0' },
+    { email: 'bob@client.com', name: 'Bob', role: '', label: '1.0' }
+  ]);
+  assert.deepEqual(priorSigners(signs, versions, 'v1'), [], 'the first baseline has no prior signers');
+  assert.deepEqual(priorSigners(signs, versions, 'nope'), []);
+});
+
 /* ---- the attested recorder ---- */
 test('assembled rows carry the server-stamped recorder, and decisions render the attestation', () => {
   const a = assembleAnswers({}, { decisions: [{ id: 'd', k: 1, data: { decision: 'Use Postgres', owner: 'Tim' }, pos: 1, rev: 1, updated_by_name: 'Ana Reyes' }] });
   assert.equal(a.decisions[0]._by, 'Ana Reyes');
   const body = buildSections(a, '', []).decisions;
   assert.ok(body.includes('Tim (recorded by Ana Reyes)'));
+});
+
+test('assembled rows carry the stamped author and origin, and app origin stays implicit', () => {
+  const a = assembleAnswers({}, { fr: [
+    { id: 'r1', k: 1, data: { stmt: 'When X, the system shall Y' }, pos: 1, rev: 1, updated_by_name: 'Ana Reyes', author_name: 'Dr Priya Nair', origin: 'sme' },
+    { id: 'r2', k: 2, data: { stmt: 'The system shall Z' }, pos: 2, rev: 1, updated_by_name: 'Ana Reyes', author_name: 'Ana Reyes', origin: 'app' },
+    { id: 'r3', k: 3, data: { stmt: 'The system shall W' }, pos: 3, rev: 1, updated_by_name: 'Ana Reyes', author_name: 'designer-key', origin: 'agent' }
+  ] });
+  assert.equal(a.fr[0]._author, 'Dr Priya Nair'); assert.equal(a.fr[0]._origin, 'sme'); assert.equal(a.fr[0]._by, 'Ana Reyes');
+  assert.equal(a.fr[1]._author, 'Ana Reyes'); assert.equal(a.fr[1]._origin, undefined, 'a row typed in the app carries no origin mark');
+  assert.equal(a.fr[2]._origin, 'agent', 'an agent draft stays marked agent after promotion');
+  assert.equal(rowsFilled(a.fr).length, 3, 'bookkeeping keys do not count as content');
 });
 
 test('a row whose only content is bookkeeping is not a filled row', () => {

@@ -104,6 +104,29 @@ test('prd.md is the full assembled document for the baseline', () => {
   assert.ok(md.includes('Revision History'));
 });
 
+test('requirements.json carries each row\u2019s author and origin beside the attested recorder', () => {
+  const withAuthor = buildImplementationFiles({ ...meta, answers: { ...answers,
+    fr: [{ _k: 7, stmt: 'When a form is retyped, the system shall flag it', fit: 'Flagged within 1s. Test.', pri: 'Must', src: 'Inbox · Dr Priya Nair', _by: 'Ana Reyes', _author: 'Dr Priya Nair', _origin: 'sme' }] } });
+  const j = JSON.parse(withAuthor.find((f) => f.name === 'requirements.json').text);
+  const r = j.requirements.fr.find((x) => x.id === 'FR-007');
+  assert.equal(r.author, 'Dr Priya Nair');
+  assert.equal(r.origin, 'sme');
+  assert.equal(r.recordedBy, 'Ana Reyes');
+  assert.equal(r.source, 'Inbox · Dr Priya Nair');
+});
+
+test('every file in the package carries the full fingerprint, so one file alone still names its baseline', () => {
+  const fp = 'a'.repeat(64);
+  for (const f of files) {
+    assert.ok(f.text.includes(fp), f.name + ' carries the full 64-character fingerprint');
+  }
+  assert.ok(!byName['acceptance.md'].includes(fp.slice(0, 16) + '…'), 'no truncated fingerprint remains');
+  const first = buildImplementationFiles({ ...meta, prevAnswers: null, prevLabel: '' });
+  assert.ok(first.find((f) => f.name === 'CHANGES.md').text.includes(fp), 'an initial baseline CHANGES.md carries it too');
+  const prd = byName['prd.md'];
+  assert.ok(prd.indexOf(fp) < prd.indexOf('FR-001'), 'prd.md states the fingerprint before the content it covers');
+});
+
 test('README.md states the symmetry: one fingerprint across client report and package', () => {
   const md = byName['README.md'];
   assert.ok(md.includes('a'.repeat(64)));

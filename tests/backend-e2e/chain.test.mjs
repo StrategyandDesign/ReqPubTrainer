@@ -36,6 +36,7 @@ try {
   await run(sql(rel('../../supabase/schema.sql')));
   await run(sql(rel('../../supabase/migrations/0004_chain.sql')));
   await run(sql(rel('../../supabase/migrations/0004_chain.sql')));
+  await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
   check('migrations/0004_chain.sql applies twice on top of schema.sql', true);
 
 /* v2.57.1: log_activity is private after the C1-001 lockdown. The fixture now

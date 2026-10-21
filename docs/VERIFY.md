@@ -227,12 +227,25 @@ To verify a receipt bundle offline, three steps:
    verify the Ed25519 signature in `signature.txt` against the public key in
    `publickey.txt`. On Node 20 or later: `crypto.verify(null, hashBytes,
    publicKey, signatureBytes)` returns true.
-3. Time. For each `.tsr`, verify it against the receipt canonical hash with
-   the OpenSSL command printed by `tools/reqpub-verify.mjs`.
+3. Time. For each `.tsr`, read the RFC 3161 TimeStampResp: its status must
+   be granted (0) or grantedWithMods (1); the TSTInfo message imprint, under
+   the SHA-256 algorithm identifier, must equal the receipt canonical hash
+   from step 2 (the same value `openssl ts -verify -digest` takes); and the CMS
+   signature must verify: the message-digest attribute equals the digest of
+   the TSTInfo bytes, and the signature over the signed attributes (as a SET)
+   verifies against a certificate carried in the token. The token's genTime
+   is the existence time. What this step does not decide is whether that
+   certificate chains to a root you trust; that is your trust decision, made
+   with `openssl ts -verify -digest <canonical hash> -in <token> -CAfile
+   <your CA file>`.
 
-`node tools/reqpub-verify.mjs <extracted-receipt-directory>` performs steps 1
-and 2 from this document alone, on Node builtins, importing nothing from
-ReqPub, and prints the OpenSSL commands for step 3.
+`node tools/reqpub-verify.mjs <extracted-receipt-directory>` performs steps 1,
+2 and 3 from this document alone, on Node builtins, importing nothing from
+ReqPub (v3.1; before it, step 3 was delegated to openssl entirely), and
+prints the openssl command for the chain-to-root decision on each token. A
+token the tool cannot read (a digest or signature algorithm outside the set
+above, or indefinite-length encoding) is reported as not checked, with that
+openssl command, and does not fail the receipt.
 
 What the seal proves: this receipt content was signed by the holder of the
 ReqPub key named by its kid, and, where timestamps are present, existed at
@@ -319,8 +332,9 @@ Verification is strict both ways. A listed file that is missing or whose
 bytes do not hash to its manifest entry fails the pack. A file present in
 the folder but absent from the manifest fails the pack. Then every
 baseline bundle must reproduce its embedded fingerprint per sections 3 to
-6, and every receipt folder must pass section 9, with the .tsr timestamps
-checked by the printed openssl ts commands.
+6, and every receipt folder must pass section 9, each .tsr token read and
+checked, with the printed openssl ts commands left for the chain-to-root
+decision.
 
 One command runs all of it:
 

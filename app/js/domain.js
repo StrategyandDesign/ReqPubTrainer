@@ -186,7 +186,7 @@ export const Q = [
   { id: 'depend', sec: 'adc', type: 'list', prompt: 'Dependencies', help: 'Other systems, vendors, data, or decisions outside the team.', add: 'Add dependency', ph: 'A dependency' },
   { id: 'constrain', sec: 'adc', type: 'list', prompt: 'Constraints', help: 'Fixed limits the solution must respect: platform, budget, schedule, standards, policy.', add: 'Add constraint', ph: 'A constraint' },
 
-  { id: 'fr', sec: 'functional', type: 'rows', prompt: 'Functional requirements', help: 'Each function as a single, testable requirement. Every requirement needs a fit criterion: the measurable condition that defines acceptance.', add: 'Add requirement', req: true, cols: [{ k: 'stmt', l: 'Requirement', ph: 'When the user does X, the system does Y.' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'The measurable acceptance condition. End with Test, Inspection, or Demonstration.' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
+  { id: 'fr', sec: 'functional', type: 'rows', prompt: 'Functional requirements', help: 'Each function as a single, testable requirement. Every requirement needs a fit criterion: the measurable condition that defines acceptance.', add: 'Add requirement', req: true, cols: [{ k: 'stmt', l: 'Requirement', ph: 'When the user does X, the system shall do Y.' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'The measurable acceptance condition. End with Test, Inspection, or Demonstration.' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
 
   { id: 'nfr', sec: 'nonfunctional', type: 'rows', prompt: 'Non-functional requirements', help: 'Quality requirements. Replace fast and secure with numbers and conditions. Consider performance, security, reliability, availability, scalability, accessibility, compliance.', add: 'Add requirement', cols: [{ k: 'stmt', l: 'Requirement', ph: 'Quality requirement with a number' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'Measured condition' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
 
@@ -264,8 +264,15 @@ export function assembleAnswers(fields, rows) {
   for (const q of Q) {
     const rs = (rows && rows[q.id]) || [];
     // _by is upsert_row's server-stamped last-editor identity: an attested
-    // 'recorded by' beside free-text claims like a decision's owner.
-    if (q.type === 'rows') a[q.id] = rs.map((r) => ({ ...r.data, _k: r.k, ...(r.updated_by_name ? { _by: r.updated_by_name } : {}) }));
+    // 'recorded by' beside free-text claims like a decision's owner. _author
+    // and _origin (v3.1) are stamped once at insert: the person whose words
+    // the row holds and where they came from (app, sme, agent, ...), copied
+    // server-side from the promoted Inbox entry. They ride the snapshot, so
+    // a baseline keeps its authors after the people move on.
+    if (q.type === 'rows') a[q.id] = rs.map((r) => ({ ...r.data, _k: r.k,
+      ...(r.updated_by_name ? { _by: r.updated_by_name } : {}),
+      ...(r.author_name ? { _author: r.author_name } : {}),
+      ...(r.origin && r.origin !== 'app' ? { _origin: r.origin } : {}) }));
     else if (q.type === 'list') a[q.id] = rs.map((r) => String((r.data && r.data.text) || ''));
   }
   return a;
@@ -288,6 +295,72 @@ const naField = () => '[ to confirm ]';
 /* Executed-by defaults to Human everywhere it renders; the stored blank and
    the stored 'Human' are the same fact. */
 export const execOf = (r) => (r && r.exec) || 'Human';
+
+/* ---- Prior signers ----
+   The people who signed the last signed baseline are the default signers of
+   the next one: a new version is a change to what they attested to, and the
+   record should ask them again rather than start the list from blank. Pure:
+   signs are sign_requests rows (version_id, signer_email, signer_name,
+   signed_name, signer_role, status, revoked), versions carry id and seq.
+   Returns [{email, name, role}] from the nearest earlier version that holds
+   at least one live signature, deduplicated by email, in sign order. A
+   declined, pending or revoked request is not a signer. */
+export function priorSigners(signs, versions, versionId) {
+  const vs = (versions || []).slice().sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  const idx = vs.findIndex((v) => v.id === versionId);
+  if (idx < 0) return [];
+  for (let i = idx - 1; i >= 0; i--) {
+    const signed = (signs || []).filter((s) => s.version_id === vs[i].id && s.status === 'signed' && !s.revoked);
+    if (!signed.length) continue;
+    const seen = new Set(); const out = [];
+    for (const s of signed) {
+      const email = String(s.signer_email || '').trim().toLowerCase();
+      if (!email || seen.has(email)) continue;
+      seen.add(email);
+      out.push({ email, name: String(s.signed_name || s.signer_name || '').trim(), role: String(s.signer_role || '').trim(), label: vs[i].label || '' });
+    }
+    return out;
+  }
+  return [];
+}
+
+/* ---- EARS shape ----
+   The Easy Approach to Requirements Syntax gives a requirement one of five
+   shapes, each ending in "the <system> shall <response>":
+     ubiquitous  The system shall ...
+     event       When <trigger>, the system shall ...
+     state       While <state>, the system shall ...
+     optional    Where <feature>, the system shall ...
+     unwanted    If <condition>, then the system shall ...
+   earsShape returns the shape name, or null when the sentence is none of
+   them. It is a shape check, not a judgment of the content, and it is the
+   first piece of the mechanical review tier: a requirement that reads
+   "handles errors gracefully" has no trigger and no shall, and this names it.
+   Compound forms (While ..., when ..., the system shall ...) count as the
+   leading keyword's shape. */
+const EARS_SUBJECT = /\b(the|a|an|each|every|all)\s+[^,]{1,80}?\bshall\s+\S/i;   // the system shall ...
+const NAMED_SUBJECT = /\b([A-Z][\w-]*)\s+shall\s+\S/;                            // ReqPub shall ..., Users shall ...
+const PRONOUN = /^(it|they|we|you|he|she|this|that|these|those|i)$/i;
+function shallTail(t) {
+  if (EARS_SUBJECT.test(t)) return true;
+  const m = t.match(NAMED_SUBJECT);
+  return !!m && !PRONOUN.test(m[1]);
+}
+export function earsShape(stmt) {
+  const t = String(stmt || '').replace(/\s+/g, ' ').trim();
+  if (!t || !shallTail(t)) return null;
+  const lead = (t.match(/^(when|while|where|if)\b/i) || [])[1];
+  if (!lead) {
+    // Ubiquitous: the sentence opens with its subject, an article or
+    // quantifier, or the system's own name, followed by shall.
+    const opensWithSubject = /^(the|a|an|each|every|all)\b/i.test(t) || (/^[A-Z][\w-]*\s+shall\b/.test(t) && !PRONOUN.test(t.split(' ')[0]));
+    return opensWithSubject ? 'ubiquitous' : null;
+  }
+  const k = lead.toLowerCase();
+  if (k === 'if') return /\bthen\b/i.test(t) ? 'unwanted' : null;
+  if (!/,/.test(t)) return null;                 // a condition needs its comma before the response
+  return { when: 'event', while: 'state', where: 'optional' }[k];
+}
 
 export function suggestFit(stmt) {
   stmt = (stmt || '').replace(/\s+/g, ' ').trim();
@@ -698,7 +771,10 @@ export function bBrief(a, sections) {
         // the departures, so an agent-executed requirement is visible to the
         // reviewer without every line repeating the default.
         const tag = (r.exec && r.exec !== 'Human') ? ' \u00b7 executed by ' + r.exec.toLowerCase() : '';
-        if (r.stmt && r.stmt.trim()) byc[c].push(r.stmt.trim() + tag);
+        // The pass condition, when the payload carries it (signature and
+        // presentation pages). A brief payload omits fit and prints nothing.
+        const fit = (r.fit && String(r.fit).trim()) ? ' **Fit:** ' + String(r.fit).trim() : '';
+        if (r.stmt && r.stmt.trim()) byc[c].push(r.stmt.trim() + tag + fit);
       });
       const multi = order.length > 1 || (order.length === 1 && order[0] !== 'General');
       const blocks = order.filter((c) => byc[c].length).map((c) => (multi ? '**' + c + '**\n\n' : '') + byc[c].map((s) => '- ' + s).join('\n'));
@@ -814,7 +890,7 @@ export function reqDiff(prev, cur) {
 const DIFF_COLS = {
   fr: [['stmt', 'statement'], ['fit', 'fit criterion'], ['pri', 'priority'], ['exec', 'executed by'], ['comp', 'component']],
   nfr: [['stmt', 'statement'], ['fit', 'fit criterion'], ['pri', 'priority'], ['exec', 'executed by'], ['comp', 'component']],
-  eval: [['dim', 'quality dimension'], ['metric', 'metric and method'], ['thresh', 'threshold'], ['exec', 'executed by'], ['comp', 'component']],
+  eval: [['dim', 'quality dimension'], ['metric', 'metric and method'], ['thresh', 'threshold'], ['dataset', 'eval set'], ['exec', 'executed by'], ['comp', 'component']],
   interfaces: [['iface', 'interface'], ['req', 'requirement'], ['fit', 'fit criterion'], ['comp', 'component']]
 };
 export function reqDiffDetail(prev, cur) {

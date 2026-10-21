@@ -134,14 +134,15 @@ export function createSync() {
   },
 
   /* ---------------- repeating rows ---------------- */
-  async addRow(fieldId, data, afterRender) {
+  async addRow(fieldId, data, afterRender, source) {
     const st = this.state;
     this.inflight++; this.bump();
-    const r = await this.repo.upsertRow(st.pid, fieldId, null, data || {});
+    const r = await this.repo.upsertRow(st.pid, fieldId, null, data || {}, null, null, source || null);
     this.inflight--;
     const out = r.data;
-    if (r.error || !out || !out.ok) { this.fail('add', () => this.addRow(fieldId, data)); return null; }
-    const row = { id: out.id, field_id: fieldId, k: out.k, data: data || {}, pos: out.pos, rev: out.rev };
+    if (r.error || !out || !out.ok) { this.fail('add', () => this.addRow(fieldId, data, afterRender, source)); return null; }
+    const row = { id: out.id, field_id: fieldId, k: out.k, data: data || {}, pos: out.pos, rev: out.rev,
+      author_name: out.author || '', origin: out.origin || 'app' };
     (st.rows[fieldId] = st.rows[fieldId] || []).push(row);
     st.everSaved = true; this.failed = 0;
     this.bump();
@@ -304,7 +305,8 @@ export function createSync() {
         const i = list.findIndex((x) => x.id === rec.id);
         if (rec.deleted) { if (i >= 0) { list.splice(i, 1); this.onChange('rows:' + rec.field_id); } return; }
         if (i < 0) {
-          list.push({ id: rec.id, field_id: rec.field_id, k: rec.k, data: rec.data, pos: rec.pos, rev: rec.rev });
+          list.push({ id: rec.id, field_id: rec.field_id, k: rec.k, data: rec.data, pos: rec.pos, rev: rec.rev,
+            updated_by_name: rec.updated_by_name, author_name: rec.author_name, origin: rec.origin });
           list.sort((a, b) => a.pos - b.pos);
           this.onChange('rows:' + rec.field_id);
         } else if (rec.rev > list[i].rev) {

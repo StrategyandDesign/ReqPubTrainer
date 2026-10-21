@@ -4,7 +4,7 @@
    ============================================================================ */
 
 import { esc, ico, IC, uid, themeInit, themeSet, copyText, debounce, presentUrl, pushUnique, upsertById, isDupKey, versionFingerprint, download } from './core.js';
-import { assembleAnswers, buildSections, suggestFit, changeNote, qById, mdToHtml, defaultBriefSections, PHASES, PHASE_LETTER, currentPhase, phaseLetter, rowsFilled, tagDoneCandidates, ENGAGEMENT } from './domain.js';
+import { assembleAnswers, buildSections, suggestFit, changeNote, qById, mdToHtml, defaultBriefSections, PHASES, PHASE_LETTER, currentPhase, phaseLetter, rowsFilled, tagDoneCandidates, ENGAGEMENT, priorSigners } from './domain.js';
 import { sb, online, repo, buildSharePayload, sb as sbClient } from './data.js';
 import { sync } from './sync.js';
 import { viewProjects, viewWorkspace, currentDocMd, nextLabel, paletteItems, documentTabHTML, docShotsOf } from './views-app.js';
@@ -543,12 +543,12 @@ async function generateVersion() {
   const auto = changeNote(prevMeta ? (APP.snapshots[prevMeta.seq] || {}).snapshot : null, answers, !prevMeta);
   const note = [g.note && g.note.trim(), auto].filter(Boolean).join(' - ');
 
-  // The gate name and the record's state ride INSIDE the snapshot: a gate is
-  // a named decision on a fixed artifact, and snapshot.health is the evidence
-  // of what was true when the artifact was fixed. create_version stores the
-  // jsonb exactly as sent; no schema change, and the fingerprint covers both.
+  // The gate name rides INSIDE the snapshot: a gate is a named decision on a
+  // fixed artifact. Readiness signals do not: until v3.1 the computed health
+  // list was frozen under the fingerprint the client signs, which put a value
+  // nobody wrote inside the signed artifact. Signals are computed on screen
+  // and on the gate packet at print time, and never stored.
   const gate = (g.gate || '').trim().slice(0, 80);
-  const snapHealth = healthSignals(answers, { versions: APP.versions, approvalsByVersion: APP.approvals, shares: APP.shares, comms: APP.comms, discovery: APP.discovery });
   // The walkthrough freezes with the baseline: order, captions, and file
   // references ride the snapshot, sealed under the same fingerprint.
   const wt = (APP.walkthrough || []).map((s, i) => ({
@@ -556,7 +556,7 @@ async function generateVersion() {
     file_name: (s.attachment && s.attachment.file_name) || '',
     attachment_id: s.attachment_id
   }));
-  const r = await repo.createVersion(APP.pid, !!g.major, note, { answers, sections, ...(gate ? { gate } : {}), ...(wt.length ? { walkthrough: wt } : {}), health: snapHealth });
+  const r = await repo.createVersion(APP.pid, !!g.major, note, { answers, sections, ...(gate ? { gate } : {}), ...(wt.length ? { walkthrough: wt } : {}) });
   const out = r.data;
   if (r.error || !out || !out.ok) {
     g.busy = false; g.error = (out && out.error === 'forbidden') ? 'Your role cannot generate versions.' : 'Could not generate. Try again.';
@@ -1348,7 +1348,9 @@ async function handleAction(a, id, t, e) {
         product: answers.ctrl_product || (APP.project && APP.project.name) || 'Untitled',
         org: answers.ctrl_org || '', label: snap.label, status: v ? v.status : snap.status,
         eyebrow: snap.snapshot.gate || undefined,
-        snapHealth: Array.isArray(snap.snapshot.health) ? snap.snapshot.health : undefined,
+        // Computed now, from the stored answers, and labelled as such on the
+        // packet. Nothing derived is read back out of the snapshot.
+        criteria: healthSignals(answers, { versions: APP.versions, approvalsByVersion: APP.approvals, shares: APP.shares, comms: APP.comms, discovery: APP.discovery }),
         baselined: (v && v.created_at) || snap.created_at || '',
         approvedAt: (v && v.status === 'approved') ? (ap.filter((x) => x.status === 'approved' && x.decided_at).map((x) => x.decided_at).sort().pop() || '') : '',
         approvals: ap, fingerprint,
@@ -1437,13 +1439,15 @@ async function handleAction(a, id, t, e) {
       const answers = snap.snapshot.answers || {};
       const fingerprint = await versionFingerprint(snap);
       const v = APP.versions.find((x) => x.seq === seq);
-      const pay = buildSharePayload(APP.project || {}, answers, snap.label, seq, 'brief', v ? v.build : '', defaultBriefSections(), (snap.snapshot && snap.snapshot.walkthrough) || []);
+      // The client's own report carries each requirement's fit criterion, as
+      // the signature page does: the client owns the pass conditions it
+      // signed. A brief shared with an SME still omits them.
+      const pay = buildSharePayload(APP.project || {}, answers, snap.label, seq, 'present', v ? v.build : '', defaultBriefSections(), (snap.snapshot && snap.snapshot.walkthrough) || []);
       const present = (APP.shares || []).find((s) => s.kind === 'present' && !s.revoked && s.version_seq === seq);
       printClientDoc(answers, {
         product: answers.ctrl_product || (APP.project && APP.project.name) || 'Untitled',
         org: answers.ctrl_org || '', label: snap.label, status: v ? v.status : snap.status,
         eyebrow: snap.snapshot.gate || undefined,
-        snapHealth: Array.isArray(snap.snapshot.health) ? snap.snapshot.health : undefined,
         baselined: (v && v.created_at) || snap.created_at || '',
         approvedAt: (() => { const ap = v ? (APP.approvals[v.id] || []) : []; return (v && v.status === 'approved') ? (ap.filter((x) => x.status === 'approved' && x.decided_at).map((x) => x.decided_at).sort().pop() || '') : ''; })(),
         record: (() => {
@@ -1676,10 +1680,13 @@ async function handleAction(a, id, t, e) {
       // rows to {stmt, comp} only) so the next version note can attribute the
       // addition to the input that caused it. See changeNote in domain.js.
       const from = ({ team: 'Notes', meeting: 'Notes' })[c.origin] || 'Inbox';
+      // The comm is passed as the row's source: the server stamps the row's
+      // author and origin from it, so an operator's words carry the
+      // operator's name and an agent's draft stays marked agent.
       const row = await sync.addRow('fr', {
         stmt: (c.body || c.title || '').slice(0, 500), fit: '', pri: 'Should', comp: '',
         src: from + (c.author_name ? ' · ' + c.author_name : '')
-      });
+      }, null, c.id);
       if (row) {
         const rid = 'FR-' + String(row.k).padStart(3, '0');
         await repo.setCommFields(id, { promoted_to: rid });
@@ -1976,6 +1983,34 @@ async function handleAction(a, id, t, e) {
         try { const m = await repo.sendSignEmail(out.id); mailed = !(m && m.error); } catch { mailed = false; }
         try { await copyText(link); } catch { /* clipboard denied */ }
         toast(mailed ? 'Signature request emailed, link also copied' : 'Request created and link copied, email delivery is not configured, send the link yourself');
+        APP.signs = await repo.signsFor(APP.pid); APP.receipts = keyById(await repo.receiptsFor(APP.pid));
+      } finally { APP.signSendBusy = false; render(); }
+      break;
+    }
+    case 'signsendprior': {
+      // The prior baseline's signers, each sent a link to this exact
+      // baseline. Same path as a single request, once per signer, and the
+      // fingerprint captured once for all of them.
+      if (APP.signSendBusy) break;
+      const vid = t.dataset.id, seq = +t.dataset.seq;
+      const prior = priorSigners(Object.values(APP.signs || {}).flat(), APP.versions || [], vid);
+      if (!prior.length) break;
+      APP.signSendBusy = true; render();
+      try {
+        await ensureSnapshot(seq);
+        const snap = APP.snapshots[seq];
+        const fp = snap ? await versionFingerprint(snap) : '';
+        let made = 0, mailed = 0;
+        for (const p of prior) {
+          const r = await repo.signCreate(vid, p.email, p.name, p.role, fp);
+          const out = r.data;
+          if (!out || !out.ok) continue;
+          made++;
+          try { const m = await repo.sendSignEmail(out.id); if (!(m && m.error)) mailed++; } catch { /* email optional */ }
+        }
+        toast(made === 0 ? 'Could not create the signature requests'
+          : mailed === made ? made + ' signature request' + (made === 1 ? '' : 's') + ' emailed'
+          : made + ' request' + (made === 1 ? '' : 's') + ' created; email delivery is not configured for ' + (made - mailed) + ', send those links yourself');
         APP.signs = await repo.signsFor(APP.pid); APP.receipts = keyById(await repo.receiptsFor(APP.pid));
       } finally { APP.signSendBusy = false; render(); }
       break;
@@ -2576,30 +2611,6 @@ async function handleAction(a, id, t, e) {
       render();
       break;
     }
-    case 'apprrecord': {
-      // A sign-off recorded on an already-approved baseline: insert the slot
-      // (the trigger forces it pending), then decide it approved. Provenance
-      // stamps decided_by/decided_at to the recorder - honest evidence, and
-      // the approved_no_signoff warning clears with it. The busy flag keeps a
-      // double-click from recording the same signer twice.
-      if (APP.apprBusy) break;
-      const role = val('apr-role-' + id).trim();
-      const name = val('apr-name-' + id).trim();
-      if (!name) { toast('Type the signer\u2019s name. A sign-off needs one'); break; }
-      APP.apprBusy = true;
-      try {
-        const r = await repo.addApprover(id, role, name, null);
-        const slotId = r.data && r.data[0] && r.data[0].id;
-        if (r.error || !slotId) { toast('Could not record the sign-off'); break; }
-        const d = await repo.decideApproval(slotId, 'approved', 'Recorded on the approved baseline');
-        if (d.error || d.data !== true) { toast('Slot added but not decided. Approve it on the row'); }
-        const list = await repo.approvals([id]);
-        APP.approvals[id] = list[id] || [];
-        toast('Sign-off recorded');
-        render();
-      } finally { APP.apprBusy = false; }
-      break;
-    }
     case 'appradd': {
       if (APP.apprBusy) break;
       const sel = document.getElementById('apr-user-' + id);
@@ -3075,7 +3086,6 @@ function docMeta(d) {
       : null,
     org: a.ctrl_org || '', label: d.label || '', status: v ? v.status : 'draft',
     eyebrow: (snap && snap.snapshot.gate) || undefined,
-    snapHealth: (snap && Array.isArray(snap.snapshot.health)) ? snap.snapshot.health : undefined,
     // Evidence dates: printing a stored baseline carries the baseline's own
     // date, and the last sign-off date when fully approved.
     baselined: (APP.viewSeq != null && v) ? v.created_at : '',

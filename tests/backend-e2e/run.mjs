@@ -112,6 +112,22 @@ try {
   r = await one(`select delete_row('p1','${rowId}'::uuid) j`);
   check('soft delete works', r.j === true);
 
+  console.log('\n- rows: author and origin are stamped server-side (v3.1) -');
+  const typed = (await one(`select upsert_row('p1','fr',null,'{"stmt":"Typed in the app"}'::jsonb) j`)).j;
+  const typedRow = await one(`select author_name, origin from field_rows where id='${typed.id}'`);
+  check('a row typed in the app is authored by the manager, origin app', typedRow.origin === 'app' && typedRow.author_name === typed.author && typed.origin === 'app', { typed, typedRow });
+  const smeComm = (await one(`insert into comms(org_id, project_id, origin, author_name, title, body)
+    values ('${(await one(`select org_id from projects where id='p1'`)).org_id}','p1','sme','Dr Priya Nair','Field note','When a form is retyped, the system shall flag it') returning id`)).id;
+  const promoted = (await one(`select upsert_row('p1','fr',null,'{"stmt":"When a form is retyped, the system shall flag it","src":"Inbox · Dr Priya Nair"}'::jsonb,null,null,'${smeComm}'::uuid) j`)).j;
+  const promotedRow = await one(`select author_name, origin, updated_by_name from field_rows where id='${promoted.id}'`);
+  check('a row promoted from an SME entry is authored by the SME, origin sme, and the manager stays the recorder',
+    promotedRow.author_name === 'Dr Priya Nair' && promotedRow.origin === 'sme' && promotedRow.updated_by_name === typedRow.author_name, promotedRow);
+  const edited = (await one(`select upsert_row('p1','fr','${promoted.id}'::uuid,'{"stmt":"When a form is retyped twice, the system shall flag it"}'::jsonb,null,1) j`)).j;
+  const afterEdit = await one(`select author_name, origin from field_rows where id='${promoted.id}'`);
+  check('editing the row later keeps its author and origin', edited.ok === true && afterEdit.author_name === 'Dr Priya Nair' && afterEdit.origin === 'sme', afterEdit);
+  const badSource = (await one(`select upsert_row('p1','fr',null,'{"stmt":"x"}'::jsonb,null,null,'00000000-0000-0000-0000-000000000000'::uuid) j`)).j;
+  check('a source that is not a comm of this project is refused', badSource.ok === false && badSource.error === 'bad_source', badSource);
+
   console.log('\n- versions: allocation + approval gate -');
   r = await one(`select create_version('p1', false, 'Test cut', '{"answers":{},"sections":{}}'::jsonb) j`);
   check('server allocates seq 3, label 1.2', r.j.ok === true && r.j.seq === 3 && r.j.label === '1.2', r.j);
@@ -119,7 +135,9 @@ try {
   r = await one(`select version_set_status('${vid}'::uuid, 'approved') j`);
   check('draft → approved is an illegal transition', r.j.ok === false && r.j.error === 'bad_transition', r.j);
   await run(`select version_set_status('${vid}'::uuid, 'in_review')`);
-  await run(`insert into version_approvals(version_id, approver_role, approver_name) values ('${vid}','Engineering','Lee')`);
+  // v3.1: a slot a manager decides is a slot assigned to a teammate (here the
+  // manager); a slot with no assignee is the client's and takes an e-signature.
+  await run(`insert into version_approvals(version_id, approver_role, approver_name, approver_user_id) values ('${vid}','Engineering','Lee','${MANAGER}')`);
   r = await one(`select version_set_status('${vid}'::uuid, 'approved') j`);
   check('approval gate blocks approve while an approver is pending', r.j.ok === false && r.j.error === 'approvals_pending', r.j);
   const apid = (await one(`select id from version_approvals where version_id='${vid}'`)).id;
@@ -238,8 +256,8 @@ try {
 
   // approval provenance trigger (M3): direct insert forced pending; decided_by stamped
   const vv = await one(`select id from versions where project_id='p1' order by seq desc limit 1`);
-  await run(`insert into version_approvals(version_id, approver_role, approver_name, status, decided_by)
-             values ('${vv.id}','Sponsor','Sam','approved','${PARTNER_USER}')`);
+  await run(`insert into version_approvals(version_id, approver_role, approver_name, status, decided_by, approver_user_id)
+             values ('${vv.id}','Sponsor','Sam','approved','${PARTNER_USER}','${MANAGER}')`);
   const forged = await one(`select status, decided_by from version_approvals where approver_name='Sam'`);
   check('direct approver insert is forced to pending (no pre-approval)', forged.status === 'pending' && forged.decided_by === null, forged);
   const said = await one(`select id from version_approvals where approver_name='Sam'`);
@@ -257,6 +275,12 @@ try {
   try { await run(`update project_fields set value='"x"'::jsonb where project_id='p1'`); }
   catch { fieldDenied = true; }
   check('authenticated cannot write project_fields directly (revoked, not just no-policy)', fieldDenied);
+  // v3.1: author_name and origin are stamped by upsert_row and cannot be
+  // asserted by a direct row insert under the authenticated role either.
+  let rowDenied = false;
+  try { await run(`insert into field_rows(project_id, field_id, k, data, pos, author_name, origin) values ('p1','fr',999,'{}'::jsonb,999,'Forged','agent')`); }
+  catch { rowDenied = true; }
+  check('authenticated cannot insert a row with a forged author or origin directly', rowDenied);
   await run('reset role');
 
   // version label format guard (M4)

@@ -5,13 +5,13 @@
 
 import { esc, escA, ico, IC, relTime, fmtDate, initials, attachChips, attachInput, fmtBytes, fmtFingerprint } from './core.js';
 import { STATUS_LABEL } from './views-app.js';
-import { isEngagement, currentPhase, PHASE_LETTER, rowsFilled } from './domain.js';
+import { isEngagement, currentPhase, PHASE_LETTER, rowsFilled, priorSigners } from './domain.js';
 import { healthSignals, recordCounts } from './health.js';
 
 const attachmentsForComm = (APP, commId) => (APP.attachments || []).filter((a) => a.comm_id === commId);
 
 const EXTERNAL = { app: 1, brief: 1, sme: 1, partner: 1, update: 1 };
-const ORIGIN_LABEL = { app: 'App', brief: 'Reviewer', sme: 'SME', partner: 'Client contact', team: 'Team', meeting: 'Meeting', update: 'Update link' };
+const ORIGIN_LABEL = { app: 'App', brief: 'Reviewer', sme: 'SME', partner: 'Client contact', team: 'Team', meeting: 'Meeting', update: 'Update link', agent: 'Agent' };
 const AUTHOR_LABEL = { partner: 'Client contact', sme: 'SME', team: 'Team', client: 'Recipient' };   // author_kind keys are schema-permanent; only the label changes
 const COMM_STATUS = ['new', 'in_review', 'actioned', 'closed'];
 const COMM_STATUS_LABEL = { new: 'New', in_review: 'In review', actioned: 'Actioned', closed: 'Closed' };
@@ -611,36 +611,39 @@ function renderVersions(APP) {
     const apprRows = apprs.map((ap) => {
       const mineSlot = ap.approver_user_id && meId && ap.approver_user_id === meId;
       const canDecide = ap.status === 'pending' && (isMgr || mineSlot);
-      // How this slot resolves: an assigned teammate can self-approve; a name-only
-      // slot is a manual sign-off a manager records.
+      // How this slot resolves: an assigned teammate can self-approve, and a
+      // manager can decide an assigned slot. A slot with no assignee belongs
+      // to someone outside the team and is approved only by their own
+      // e-signature (v3.1), so the Approve control is not offered on it.
+      const external = !ap.approver_user_id;
+      const canApprove = canDecide && !external;
       const tag = mineSlot ? '<span style="color:var(--brand);font-weight:600"> · you</span>'
         : (ap.sign_request_id ? '<span style="color:var(--ink-4)"> · e-signed</span>'
-          : ap.approver_user_id ? '' : '<span style="color:var(--ink-4)"> · manual</span>');
+          : external ? (ap.status === 'pending' ? '<span style="color:var(--ink-4)"> · by e-signature</span>' : '<span style="color:var(--ink-4)"> · manual</span>') : '');
       return '<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--line);font-size:12.5px">' +
         '<span class="stchip ' + esc(ap.status === 'pending' ? 'draft' : ap.status) + '" style="height:20px;font-size:10px">' + esc(ap.status === 'pending' ? 'Pending' : STATUS_LABEL[ap.status]) + '</span>' +
         '<span style="flex:1;min-width:0"><strong>' + esc(ap.approver_role || 'Approver') + '</strong>' + (ap.approver_name ? ' - ' + esc(ap.approver_name) : '') + tag +
         (ap.comment ? '<span style="color:var(--ink-4)"> · ' + esc(ap.comment) + '</span>' : '') + '</span>' +
         (mineSlot && ap.status === 'pending' ? '<span class="stchip" style="height:20px;font-size:10px;background:var(--brand);color:#fff">Waiting on you</span>' : '') +
-        (canDecide ? '<button class="btn btn-ghost btn-sm" data-action="apprdecide" data-id="' + escA(ap.id) + '" data-val="approved" style="font-size:11px;color:var(--good)">Approve</button>' +
-          '<button class="btn btn-ghost btn-sm" data-action="apprdecide" data-id="' + escA(ap.id) + '" data-val="changes_requested" style="font-size:11px;color:var(--amber)">Changes</button>' : '') +
+        (canApprove ? '<button class="btn btn-ghost btn-sm" data-action="apprdecide" data-id="' + escA(ap.id) + '" data-val="approved" style="font-size:11px;color:var(--good)">Approve</button>' : '') +
+        (canDecide ? '<button class="btn btn-ghost btn-sm" data-action="apprdecide" data-id="' + escA(ap.id) + '" data-val="changes_requested" style="font-size:11px;color:var(--amber)">Changes</button>' : '') +
         (isMgr ? '<button class="icobtn" data-action="apprdel" data-id="' + escA(ap.id) + '" style="width:26px;height:26px">' + ico(IC.close, 'i-sm') + '</button>' : '') + '</div>';
     }).join('');
-    // On draft / in-review versions: assign teammates or add manual slots.
-    // On APPROVED versions: recording a sign-off is still legal and honest -
-    // the provenance trigger stamps who recorded it and when - so the health
-    // warning about a nameless approval is fixable exactly where it points.
-    // Teammate assignment is hidden there: a pending slot on an approved
-    // baseline never appears in anyone's waiting-on-you feed.
+    // On draft / in-review versions: assign teammates or hold a slot for
+    // someone outside the team. v3.1 removed the manager-recorded sign-off:
+    // a slot with no assignee is approved by that person's e-signature and
+    // by nothing a manager clicks, so the firm never signs for the client.
+    // On an approved baseline a further sign-off is a signature request.
     const isApproved = v.status === 'approved';
     const addAppr = isMgr
-      ? '<div style="margin-top:8px"><div style="display:flex;gap:6px;flex-wrap:wrap">' +
-        (!isApproved && memOpts ? '<select class="input" id="apr-user-' + escA(v.id) + '" style="height:34px;font-size:12px;flex:1;min-width:200px;padding:0 10px"><option value="">Assign a teammate…</option>' + memOpts + '</select>' : '') +
+      ? (isApproved
+        ? '<div class="hint" style="font-size:10.5px;margin-top:8px">This baseline is approved. A further named sign-off is recorded by e-signature: request a signature below and it lands here with its receipt.</div>'
+        : '<div style="margin-top:8px"><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        (memOpts ? '<select class="input" id="apr-user-' + escA(v.id) + '" style="height:34px;font-size:12px;flex:1;min-width:200px;padding:0 10px"><option value="">Assign a teammate…</option>' + memOpts + '</select>' : '') +
         '<input class="input" id="apr-role-' + escA(v.id) + '" placeholder="Role (e.g. Sponsor)" style="height:32px;font-size:12px;flex:1;min-width:120px">' +
-        '<input class="input" id="apr-name-' + escA(v.id) + '" placeholder="' + (isApproved ? 'Signer\u2019s name' : 'or type a name') + '" style="height:32px;font-size:12px;flex:1;min-width:110px">' +
-        '<button class="btn btn-sec btn-sm" data-action="' + (isApproved ? 'apprrecord' : 'appradd') + '" data-id="' + escA(v.id) + '">' + (isApproved ? 'Record sign-off' : 'Add') + '</button></div>' +
-        '<div class="hint" style="font-size:10.5px;margin-top:5px">' + (isApproved
-          ? 'This baseline is already approved. Recording adds a named sign-off as evidence, stamped to whoever records it, at the time it is recorded, and the health warning clears the moment it lands.'
-          : 'Assign a teammate: they see a waiting on you flag in the app and can approve their own sign-off. Or type a name to record a manual sign-off yourself.') + '</div></div>' : '';
+        '<input class="input" id="apr-name-' + escA(v.id) + '" placeholder="or type a name" style="height:32px;font-size:12px;flex:1;min-width:110px">' +
+        '<button class="btn btn-sec btn-sm" data-action="appradd" data-id="' + escA(v.id) + '">Add</button></div>' +
+        '<div class="hint" style="font-size:10.5px;margin-top:5px">Assign a teammate: they see a waiting on you flag in the app and approve their own sign-off. Or type a name to hold a slot for someone outside the team; their e-signature, requested below under that name, fills it.</div></div>') : '';
     // E-sign v1: token-keyed signature requests on this exact baseline. The
     // signature lands as an approval row above; this panel is the request
     // lifecycle - who was asked, when, what happened, and the archive link.
@@ -674,8 +677,18 @@ function renderVersions(APP) {
           '<button class="icobtn" data-action="signrevoke" data-id="' + escA(sg.id) + '" title="Revoke this link" style="width:26px;height:26px">' + ico(IC.close, 'i-sm') + '</button>' : '') +
         '</span></div>';
     }).join('');
+    // v3.1: the people who signed the last signed baseline are offered as
+    // this one's default signers. One click sends each of them a link to
+    // this exact baseline; the row disappears once any request exists here.
+    const prior = (isMgr && !signs.length) ? priorSigners(Object.values(APP.signs || {}).flat(), APP.versions || [], v.id) : [];
+    const priorLine = prior.length
+      ? '<div style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;margin-top:8px;font-size:12px">' +
+        '<span style="color:var(--ink-2)">Signed v' + esc(prior[0].label) + ': ' + prior.map((p) => esc(p.name || p.email) + (p.role ? ' (' + esc(p.role) + ')' : '')).join(', ') + '</span>' +
+        '<button class="btn btn-ghost btn-sm" data-action="signsendprior" data-id="' + escA(v.id) + '" data-seq="' + v.seq + '"' + (APP.signSendBusy ? ' disabled' : '') + ' style="font-size:11px">' +
+        (APP.signSendBusy ? 'Sending\u2026' : 'Request their signatures on this baseline') + '</button></div>'
+      : '';
     const signForm = isMgr
-      ? '<div style="margin-top:8px"><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      ? '<div style="margin-top:8px">' + priorLine + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:' + (prior.length ? '6px' : '0') + '">' +
         '<input class="input" id="sig-email-' + escA(v.id) + '" placeholder="Signer\u2019s email" style="height:32px;font-size:12px;flex:1.4;min-width:150px">' +
         '<input class="input" id="sig-name-' + escA(v.id) + '" placeholder="Name (optional)" style="height:32px;font-size:12px;flex:1;min-width:100px">' +
         '<input class="input" id="sig-role-' + escA(v.id) + '" placeholder="Role (e.g. Sponsor)" style="height:32px;font-size:12px;flex:1;min-width:110px">' +

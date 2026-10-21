@@ -38,10 +38,10 @@ already exist.
 | Client sponsor / steering committee | Present link + client baseline report | Per artifact | None |
 | Procurement / security reviewer | SECURITY.md and  | None | None |
 
-The sponsor needs no account: approval slots support manual sign-off
-(`approver_user_id` null), the engagement manager records the decision for the
-named person, and the provenance trigger stamps who recorded it, server-side.
-Self-serve executive sign-off is the e-signature phase.
+The sponsor needs no account: a slot held for them (`approver_user_id` null)
+is filled by their own e-signature on a link the engagement manager sends,
+and by nothing the manager clicks. The provenance trigger refuses any other
+path to approved, server-side, so a sponsor's sign-off is always the sponsor's.
 
 ## Naming
 

@@ -53,12 +53,23 @@ test('scoped payload physically omits unselected sections', () => {
   assert.deepEqual(p.sections, ['building', 'oos']);
 });
 
-test('fit criteria and internal fields never appear regardless of selection', () => {
+test('fit criteria and internal fields never appear in a brief regardless of selection', () => {
   const all = BRIEF_SECTIONS.map((s) => s.key);
   const p = buildSharePayload(project, answers, '1.0', 1, 'brief', '', all);
   const json = JSON.stringify(p);
   assert.ok(!json.includes('INTERNAL FIT'));
   assert.ok(!json.includes('"_k"'));
+});
+
+test('a signature payload (kind present, also the printed client report) carries each fit criterion, so the signature covers the pass condition', () => {
+  const p = buildSharePayload(project, answers, '1.0', 1, 'present', '', null);
+  const fr = p.answers.fr.find((r) => r.stmt === 'Records a session');
+  assert.equal(fr.fit, 'INTERNAL FIT', 'the signer sees the fit criterion');
+  assert.ok(!JSON.stringify(p).includes('"_k"'), 'row keys still stay internal');
+  const md = bBrief(p.answers);
+  assert.ok(md.includes('Records a session **Fit:** INTERNAL FIT'), 'the brief prints the pass condition beside its requirement');
+  const brief = bBrief(buildSharePayload(project, answers, '1.0', 1, 'brief', '', ['willdo']).answers);
+  assert.ok(!brief.includes('Fit:'), 'a brief prints no fit line at all');
 });
 
 test('requirements grouping keeps component names (names only) when components are unshared', () => {

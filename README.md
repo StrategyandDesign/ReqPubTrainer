@@ -19,8 +19,8 @@ history is archived in [docs/changelog/v2.md](docs/changelog/v2.md).
 ## Quick start
 
 ```bash
-npm test                      # 579 checks across 37 suites, node only, no install needed
-npm ci && npm run test:backend # 841 checks across 35 suites on an embedded Postgres
+npm test                      # 596 checks across 38 suites, node only, no install needed
+npm ci && npm run test:backend # 862 checks across 35 suites on an embedded Postgres
 npm run ci                    # every gate
 ```
 
