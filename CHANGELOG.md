@@ -118,6 +118,9 @@ unplaced rather than guessed. Verified against the real specimen: 25 of its
 34 blocks land in one paste, 88 rows and 12 prose answers, with the
 remainder shown honestly. Four more unit checks pin the dialect.
 
+Deploy: apply `0030_record_conformance.sql` first, then push, then redeploy
+the seal-receipt and mcp edge functions so the server reports 3.1.0.
+
 ## 3.0.1
 
 Two supply chain defects, one of which broke a working feature.

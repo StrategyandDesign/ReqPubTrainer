@@ -192,6 +192,22 @@ if (modelHits.length) violations.push(`NOMODEL the no-AI claim is contradicted b
   if (sm && sm[1] !== pkg.version) {
     violations.push(`COUNT   docs/STATUS.md states Version ${sm[1]} where package.json says ${pkg.version}`);
   }
+  /* The lockfile carries the package version twice and npm rewrites it only
+     on install; it sat at 3.0.1 through the 3.1.0 release. RUN_STATE.md
+     names the tree's version in its Version section. Both are stamps. */
+  const lock = read('package-lock.json');
+  if (lock) {
+    const lj = JSON.parse(lock);
+    const lockVersions = [lj.version, lj.packages && lj.packages[''] && lj.packages[''].version];
+    for (const v of lockVersions) {
+      if (v && v !== pkg.version) violations.push(`COUNT   package-lock.json states ${v} where package.json says ${pkg.version}`);
+    }
+  }
+  const runState = read('RUN_STATE.md') || '';
+  const rm = /## Version\s+\*\*(\d+\.\d+\.\d+)\.\*\*/.exec(runState);
+  if (rm && rm[1] !== pkg.version) {
+    violations.push(`COUNT   RUN_STATE.md states ${rm[1]} where package.json says ${pkg.version}`);
+  }
 
   /* Suite counts are structural and cheap to derive: the number of suites in
      each chain. Check counts themselves are written by the suites at run time

@@ -15,7 +15,7 @@ green: eslint 0 errors, `npm run ci` 0, `npm test` 0, `npm run test:backend` 0.
 **Ahead of Workstream E**, close the interface execution gap: a headless
 browser in the backend chain that boots the real application against a seeded
 database, clicks every registered action, and asserts nothing throws. An
-outside reviewer named it as the widest gap between 1,405 passing checks and
+outside reviewer named it as the widest gap between 1,458 passing checks and
 "the features work", and they are right. It is recorded in `docs/ASSURANCE.md`
 and as an open item in `docs/STATUS.md`.
 
@@ -34,7 +34,10 @@ None. Every change is complete.
 
 ## Version
 
-**3.0.0.** `package.json`, `package-lock.json`, `app/js/core.js`, both vendored
-`core.js` copies, `app/js/capabilities.js`, `index.html`, and
-`tests/COUNTS.json` all read 3.0.0, and `CHANGELOG.md` carries the `## 3.0.0`
-entry that the capabilities gate resolves `sinceVersion` against.
+**3.1.0.** `package.json`, `package-lock.json`, `app/js/core.js`, both vendored
+`core.js` copies and their generated function bundles, `app/js/capabilities.js`,
+`index.html`, `docs/STATUS.md`, and `tests/COUNTS.json` all read 3.1.0, and
+`CHANGELOG.md` carries the `## 3.1.0` entry that the capabilities gate resolves
+`sinceVersion` against. The claims gate fails the build if any of them drifts.
+Production matches: migration 0030 applied, the site served from `main`, and
+the `mcp` and `seal-receipt` edge functions redeployed from the 3.1.0 bundles.

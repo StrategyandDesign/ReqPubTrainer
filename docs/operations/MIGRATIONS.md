@@ -1,6 +1,6 @@
 # Migrations
 
-The ordered set. Applying `0001` through `0029` to a database built
+The ordered set. Applying `0001` through `0030` to a database built
 from `supabase/schema.sql` produces the same schema as `schema.sql` alone, and
 applying the chain twice changes nothing. Both are proven on every build by
 `tests/backend-e2e/migrations.test.mjs`, which compares the two databases
@@ -51,3 +51,4 @@ every migration is idempotent, so re-applying one is safe.
 | 0027 | `0027_pursuit_lineage.sql` | ENGAGEMENT LINEAGE. Run once in the Supabase SQL editor, | unknown |
 | 0028 | `0028_authz_lockdown.sql` | C1 HARDENING - AUTHORIZATION LOCKDOWN. Run once in the Supabase SQL | yes, 2026-08-05 |
 | 0029 | `0029_ssrf_guard.sql` | C1 HARDENING - EGRESS GUARD. Run once in the Supabase SQL editor, | yes, 2026-08-05 |
+| 0030 | `0030_record_conformance.sql` | RECORD CONFORMANCE (3.1.0): row provenance columns, server-side source copy, | yes, 2026-10-21 |

@@ -45,6 +45,9 @@ One row per release, oldest first.
 | the release before | 2.57.0 | SQL: none. Functions: yes. Push and hard refresh. |
 | the release before | 2.57.1 | SQL: migrations/0028_authz_lockdown.sql, migrations/0027_pursuit_lineage.sql. Functions: yes. Push and hard refresh. |
 | the release before | 2.57.2 | SQL: migrations/0028_authz_lockdown.sql, migrations/0029_ssrf_guard.sql. Functions: yes. Push and hard refresh. |
+| the release before | 3.0.0 | SQL: none. Functions: no. Push, delete the paths in STALE_PATHS.md, and hard refresh. |
+| the release before | 3.0.1 | SQL: none. Functions: yes, all eight, so the pinned import takes effect. Push and hard refresh. |
+| the release before | 3.1.0 | SQL: migrations/0030_record_conformance.sql, before the push. Functions: yes, seal-receipt and mcp. Push and hard refresh. |
 
 Which migrations are already applied to the production deployment is recorded
 in [MIGRATIONS.md](MIGRATIONS.md), not here. Deployment state is not
