@@ -7,7 +7,7 @@ Keyed to the v3 specification.
 **A, B, C, D, F, G, H complete. E not started**, which is the workstream the
 brief marked optional and told me to drop if short.
 
-The tree is at **3.0.0** with every stamp in lockstep, and the full chain is
+The tree is at **3.1.0** (the record conformance release) with every stamp in lockstep, and the full chain is
 green: eslint 0 errors, `npm run ci` 0, `npm test` 0, `npm run test:backend` 0.
 
 ## Exact next action

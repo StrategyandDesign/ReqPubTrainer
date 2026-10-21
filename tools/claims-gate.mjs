@@ -176,10 +176,21 @@ if (modelHits.length) violations.push(`NOMODEL the no-AI claim is contradicted b
   const site = read('index.html') || '';
   const visible = site.replace(/<[^>]+>/g, ' ');
 
-  /* The version stamp on the site must be the version in the repository. */
+  /* The version stamp on the site must be the version in the repository.
+     Two spellings exist on the site: "v3.1.0" in the checks sentence and
+     "Version 3.1.0." on the assurance line. The gate read only the first
+     until 3.1.0, when the assurance line sat at 3.0.0 through a release. */
   const vm = /\bv(\d+\.\d+\.\d+)\b/.exec(visible);
   if (vm && vm[1] !== pkg.version) {
     violations.push(`COUNT   index.html states v${vm[1]} where package.json says ${pkg.version}`);
+  }
+  for (const m of visible.matchAll(/\bVersion (\d+\.\d+\.\d+)\./g)) {
+    if (m[1] !== pkg.version) violations.push(`COUNT   index.html states "Version ${m[1]}." where package.json says ${pkg.version}`);
+  }
+  const status = read('docs/STATUS.md') || '';
+  const sm = /\*\*Version (\d+\.\d+\.\d+)\. Assurance state/.exec(status);
+  if (sm && sm[1] !== pkg.version) {
+    violations.push(`COUNT   docs/STATUS.md states Version ${sm[1]} where package.json says ${pkg.version}`);
   }
 
   /* Suite counts are structural and cheap to derive: the number of suites in

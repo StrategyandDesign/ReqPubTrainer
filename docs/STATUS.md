@@ -1,6 +1,6 @@
 # Status
 
-**Version 3.0.0. Assurance state: Self-attested.**
+**Version 3.1.0. Assurance state: Self-attested.**
 
 ## The definition of GA changed, and this says so
 
