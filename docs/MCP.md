@@ -94,14 +94,31 @@ is not true. Passing both flags still opts out, because `--require-sealed`
 does not override it. The opt-out does not skip receipt verification when
 a receipt is there.
 
+The opt-out is visible only in the operator's CI log today. The gate does
+not write it anywhere a client can read. Making `--allow-unsealed` visible
+to the client would need a server-side record of the run. That record is
+not this change. TODO.
+
+The gate is run by whoever operates the CI. That operator also chooses
+`REQPUB_MCP_URL`. A client who needs independent assurance should run this
+gate, or the offline verifier in `docs/VERIFY.md`, themselves, against the
+published keys. A green CI log is the operator's claim, not the client's check.
+
 Before a pass, the gate calls reqpub_get_receipt for each receipt id on
 that baseline and verifies the answer locally with `tools/reqpub-verify-lib.mjs`,
-the same code as `tools/reqpub-verify.mjs`. It passes only when the
+the same code as `tools/reqpub-verify.mjs`. By default it fetches the
+published keyset from `https://reqpub.com/reqpub-keys.json` (the keyset
+`docs/VERIFY.md` documents, at the site root) and uses those bytes only
+when their SHA-256 matches the pin in the gate. It passes only when the
 fingerprint matches, the receipt's Ed25519 signature verifies against the
-published key for its kid in `reqpub-keys.json`, and the fingerprint inside
-the receipt equals the baseline fingerprint. It prints a verdict line for
-fingerprint, label, sealed, receipt signature, receipt fingerprint, and
-timestamps.
+published key for its kid in that keyset, and the fingerprint inside the
+receipt equals the baseline fingerprint. A local `--keys` file is refused
+unless `--trust-local-keys` is also set. That flag prints a loud warning
+on stderr and puts the same warning in the verdict. It is how a test uses
+an ephemeral key. It is not the normal gate: a builder who controls the
+file can make a forged receipt pass. The verdict lines name the MCP host
+the gate actually used, then fingerprint, label, sealed, receipt signature,
+receipt fingerprint, and timestamps.
 
 reqpub_get_receipt currently returns timestamp status and not the `.tsr`
 bytes. When no token is present the gate prints `timestamps: not verifiable

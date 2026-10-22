@@ -255,10 +255,22 @@ runs the same seal check and the same token reader before it will pass a
 committed requirements.json. Sealed is required by default. `--require-sealed`
 is accepted and changes nothing. `--allow-unsealed` is the opt-out: the gate
 prints a warning and will accept a baseline whose sealed value is not true.
-The gate passes only when the committed fingerprint matches the baseline, the
-receipt's Ed25519 signature verifies against the published key for its kid in
-`reqpub-keys.json`, and the fingerprint inside the receipt equals the baseline
-fingerprint.
+That warning is in the operator's CI log only. The gate does not record the
+opt-out where a client can see it. A server-side record would be required
+for that, and this gate does not add one. TODO.
+
+Whoever operates the CI is who runs the gate, and that operator chooses the
+MCP URL. A client who needs independent assurance runs the gate, or the
+offline verifier in this document, themselves, against the published keys.
+
+The gate fetches those keys from `https://reqpub.com/reqpub-keys.json` and
+uses the body only when its SHA-256 matches the pin in the gate. A local
+`--keys` file is used only with `--trust-local-keys`, which prints a warning
+in the verdict, because a file the builder controls is not this keyset. The
+gate passes only when the committed fingerprint matches the baseline, the
+receipt's Ed25519 signature verifies against the published key for its kid,
+and the fingerprint inside the receipt equals the baseline fingerprint. The
+verdict names the MCP host the gate called.
 
 Timestamp limitation, over MCP only: `reqpub_get_receipt` returns the
 timestamp status and does not return the `.tsr` tokens. When those bytes are
@@ -272,8 +284,9 @@ a receipt directory is unchanged and still reads each `.tsr` file on disk.
 What the seal proves: this receipt content was signed by the holder of the
 ReqPub key named by its kid, and, where timestamps are present, existed at
 the timestamp authority times. Who typed the name is evidenced by the signing
-record, not by the seal. The published keys live at reqpub-keys.json at the
-site root, retired keys included, forever.
+record, not by the seal. The published keys live at
+`https://reqpub.com/reqpub-keys.json` (`reqpub-keys.json` at the site root),
+retired keys included, forever.
 
 ## 10. Attachment hashes (v2.49)
 

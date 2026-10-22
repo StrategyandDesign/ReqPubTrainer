@@ -68,7 +68,7 @@ const url = 'http://127.0.0.1:' + server.address().port + '/functions/v1/mcp';
 /* The stub lives in this process, so the CLI runs asynchronously: a
    synchronous spawn would block the event loop the stub answers from. */
 const run = (args, env = {}) => new Promise((resolve) => {
-  const c = spawn(process.execPath, [CLI, '--keys', keysPath, ...args], { env: { ...process.env, REQPUB_MCP_URL: url, REQPUB_MCP_KEY: 'rqp_live_' + 'k'.repeat(32), ...env } });
+  const c = spawn(process.execPath, [CLI, '--keys', keysPath, '--trust-local-keys', ...args], { env: { ...process.env, REQPUB_MCP_URL: url, REQPUB_MCP_KEY: 'rqp_live_' + 'k'.repeat(32), ...env } });
   let stdout = '', stderr = '';
   c.stdout.on('data', (d) => { stdout += d; }); c.stderr.on('data', (d) => { stderr += d; });
   c.on('close', (status) => resolve({ status, stdout, stderr }));

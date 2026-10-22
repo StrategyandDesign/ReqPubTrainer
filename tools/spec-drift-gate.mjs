@@ -10,30 +10,57 @@
      REQPUB_MCP_URL=https://<ref>.supabase.co/functions/v1/mcp \
      REQPUB_MCP_KEY=${REQPUB_MCP_KEY} \
      node tools/spec-drift-gate.mjs --project <project id> --file spec/requirements.json \
-       [--seq N] [--require-sealed] [--allow-unsealed] [--keys reqpub-keys.json]
+       [--seq N] [--require-sealed] [--allow-unsealed] \
+       [--trust-local-keys --keys <file>]
 
    --require-sealed is accepted and changes nothing: sealed is already the
    default, so a pipeline that passes the flag keeps working. --allow-unsealed
    is the opt-out. It prints a warning and will accept a baseline whose
    sealed value is not true.
 
+   Receipts are verified against the published keyset fetched from
+   https://reqpub.com/reqpub-keys.json. The bytes must match PUBLISHED_KEYS_SHA256.
+   --keys is a local file and is refused unless --trust-local-keys is also set.
+   That flag prints a warning, because a builder who controls the file can
+   make a forged receipt pass.
+
    Exit 0: fingerprint, label, seal, receipt signature, and receipt
    fingerprint all agree. Exit 1: drift, an unsealed baseline without the
-   opt-out, a receipt signature that does not verify, a receipt fingerprint
-   that is not the baseline's, or a timestamp token that is present and
-   invalid. Exit 2: the gate could not run (no key, no file, no answer, or
-   the receipt could not be fetched). It reads; it never writes. */
+   opt-out, a local key file without --trust-local-keys, a published keyset
+   that does not match the pin, a receipt signature that does not verify, a
+   receipt fingerprint that is not the baseline's, or a timestamp token that
+   is present and invalid. Exit 2: the gate could not run (no key, no file,
+   no answer, the published keys could not be fetched, or the receipt could
+   not be fetched). It reads; it never writes. */
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { claimedBaselineFingerprint, verifySeal, verifyTimestampToken } from './reqpub-verify-lib.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, dflt) => { const i = args.indexOf(name); return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : dflt; };
 const flag = (name) => args.includes(name);
-const DEFAULT_KEYS = fileURLToPath(new URL('../reqpub-keys.json', import.meta.url));
+
+/* The canonical published keyset. docs/VERIFY.md and the offline verifier
+   name this URL. There is no flag to point the fetch somewhere else. */
+export const PUBLISHED_KEYS_URL = 'https://reqpub.com/reqpub-keys.json';
+/* SHA-256 of the raw bytes of reqpub-keys.json in this repository,
+   trailing newline included. A fetched body that differs is not used. */
+export const PUBLISHED_KEYS_SHA256 = 'c2022c38ee9d4fdc293aadd63d0d4a8120c18eb8c8545de09f135ab2375f6ef4';
 
 /* Printed when --allow-unsealed is set. The opt-out is deliberate and loud. */
 export const ALLOW_UNSEALED_WARNING = 'WARNING  --allow-unsealed: sealed acceptance is NOT required for this run. An unsealed baseline will be accepted. This is not the normal gate. Remove --allow-unsealed to refuse baselines the client has not signed and sealed.';
+
+/* Printed when --keys is set without --trust-local-keys. Exit 1. */
+export const LOCAL_KEYS_REFUSAL = 'REFUSED  --keys is a local key file. This gate verifies receipts against https://reqpub.com/reqpub-keys.json unless --trust-local-keys is set. A key file the builder controls is not that published keyset.';
+
+/* Printed on stderr and in the verdict when --trust-local-keys is set. */
+export const TRUST_LOCAL_KEYS_WARNING = 'WARNING  --trust-local-keys: this run verifies the receipt against a local key file, not the published keyset at https://reqpub.com/reqpub-keys.json. A builder who controls this file can make a forged receipt pass. This is not the normal gate.';
+
+/* Host the gate actually called, port included when the URL has one. */
+export function mcpHostOf(url) {
+  try { return new URL(url).host; }
+  catch { return String(url); }
+}
 
 async function postTool({ url, key, name, toolArgs, id, fetchFn }) {
   const body = { jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: toolArgs } };
@@ -136,6 +163,35 @@ export function loadPublishedKeys(text) {
   const j = JSON.parse(text);
   if (!j || !Array.isArray(j.keys)) throw new Error('published keys file has no keys array');
   return j.keys;
+}
+
+/* Fetch the published keyset and refuse bytes that are not the pin.
+   fetchFn is the test seam. A caller cannot pass a different URL through
+   the CLI. code 1: the body is not the pinned keyset (do not verify with it).
+   code 2: the keyset could not be fetched. */
+export async function fetchPublishedKeys({ fetchFn = fetch, url = PUBLISHED_KEYS_URL, pin = PUBLISHED_KEYS_SHA256 } = {}) {
+  let response;
+  try {
+    response = await fetchFn(url, { signal: AbortSignal.timeout(20000) });
+  } catch (e) {
+    const err = new Error('cannot fetch published keys from ' + url + ': ' + (e && e.message ? e.message : String(e)));
+    err.code = 2;
+    throw err;
+  }
+  if (!response || response.ok === false) {
+    const status = response && response.status;
+    const err = new Error('cannot fetch published keys from ' + url + (status ? ': HTTP ' + status : ''));
+    err.code = 2;
+    throw err;
+  }
+  const text = await response.text();
+  const got = createHash('sha256').update(text).digest('hex');
+  if (pin && got !== pin) {
+    const err = new Error('published keyset from ' + url + ' sha256 ' + got + ' does not match the pinned ' + pin + '; the bytes were not used');
+    err.code = 1;
+    throw err;
+  }
+  return loadPublishedKeys(text);
 }
 
 /* TODO(server): reqpub_get_receipt returns tsaStatus only. The RFC 3161
@@ -295,9 +351,30 @@ async function main() {
   flag('--require-sealed');
   if (!url || !key || !projectId) { console.error('spec drift gate: REQPUB_MCP_URL, REQPUB_MCP_KEY and --project are required'); process.exit(2); }
   if (seqArg != null && !Number.isInteger(seq)) { console.error('spec drift gate: --seq must be an integer, got ' + seqArg); process.exit(2); }
+  const host = mcpHostOf(url);
+  const keysPath = opt('--keys');
+  const trustLocal = flag('--trust-local-keys');
+  /* A local key file is the builder's key unless they say so out loud.
+     Refuse before any MCP call, so the file is never consulted. */
+  if (keysPath && !trustLocal) {
+    console.log('spec drift gate: mcp host: ' + host);
+    console.error('spec drift gate: ' + LOCAL_KEYS_REFUSAL);
+    console.log('spec drift gate: ' + LOCAL_KEYS_REFUSAL);
+    process.exit(1);
+  }
+  if (trustLocal && !keysPath) {
+    console.log('spec drift gate: mcp host: ' + host);
+    console.error('spec drift gate: --trust-local-keys requires --keys <file>');
+    process.exit(2);
+  }
   let committed;
   try { committed = JSON.parse(readFileSync(file, 'utf8')); }
   catch (e) { console.error('spec drift gate: cannot read ' + file + ': ' + e.message); process.exit(2); }
+  console.log('spec drift gate: mcp host: ' + host);
+  if (trustLocal) {
+    console.error('spec drift gate: ' + TRUST_LOCAL_KEYS_WARNING);
+    console.log('spec drift gate: ' + TRUST_LOCAL_KEYS_WARNING);
+  }
   const r = await readBaseline({ url, key, projectId, seq });
   if (!r.ok) {
     const hard = r.error === 'unsealed';
@@ -319,28 +396,41 @@ async function main() {
       checks.push(...notRunReceipt('sealed baseline names no receipt id'));
       code = 2;
     } else {
-      let keys;
-      try { keys = loadPublishedKeys(readFileSync(opt('--keys', DEFAULT_KEYS), 'utf8')); }
-      catch (e) {
-        console.error('spec drift gate: cannot read published keys: ' + e.message);
-        process.exit(2);
+      let keys = null;
+      try {
+        if (trustLocal) {
+          try { keys = loadPublishedKeys(readFileSync(keysPath, 'utf8')); }
+          catch (e) { const err = new Error('cannot read published keys: ' + e.message); err.code = 2; throw err; }
+        } else keys = await fetchPublishedKeys();
+      } catch (e) {
+        const failClosed = e && e.code === 1;
+        console.error('spec drift gate: ' + (e && e.message ? e.message : String(e)));
+        if (!failClosed) process.exit(2);
+        checks.push(
+          { name: 'receipt signature', verdict: 'fail', detail: e.message },
+          { name: 'receipt fingerprint', verdict: 'skipped', detail: 'published keyset was not used' },
+          { name: 'timestamps', verdict: 'skipped', detail: 'published keyset was not used' },
+        );
+        code = 1;
       }
-      const groups = [];
-      let fetchFailed = false;
-      for (const id of ids) {
-        const got = await readReceipt({ url, key, receiptId: id });
-        if (!got.ok) {
-          fetchFailed = true;
-          const why = 'cannot fetch receipt ' + id + ': ' + got.error + (got.detail ? ' (' + got.detail + ')' : '');
-          groups.push(notRunReceipt(why));
-          continue;
+      if (keys) {
+        const groups = [];
+        let fetchFailed = false;
+        for (const id of ids) {
+          const got = await readReceipt({ url, key, receiptId: id });
+          if (!got.ok) {
+            fetchFailed = true;
+            const why = 'cannot fetch receipt ' + id + ': ' + got.error + (got.detail ? ' (' + got.detail + ')' : '');
+            groups.push(notRunReceipt(why));
+            continue;
+          }
+          groups.push(checkPublishedReceipt(got.receipt, r.baseline, keys).checks);
         }
-        groups.push(checkPublishedReceipt(got.receipt, r.baseline, keys).checks);
+        const folded = foldChecks(groups);
+        checks.push(...folded);
+        if (folded.some((c) => c.verdict === 'fail')) code = 1;
+        else if (fetchFailed) code = 2;
       }
-      const folded = foldChecks(groups);
-      checks.push(...folded);
-      if (folded.some((c) => c.verdict === 'fail')) code = 1;
-      else if (fetchFailed) code = 2;
     }
   }
   for (const c of checks) console.log('spec drift gate: ' + verdictLine(c));

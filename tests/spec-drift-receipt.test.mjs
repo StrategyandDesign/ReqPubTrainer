@@ -9,8 +9,9 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import { canonical, sha256Hex } from '../tools/reqpub-verify-lib.mjs';
+import { fetchPublishedKeys, PUBLISHED_KEYS_SHA256, PUBLISHED_KEYS_URL, TRUST_LOCAL_KEYS_WARNING } from '../tools/spec-drift-gate.mjs';
 import { syntheticAuthority } from './fixtures/rfc3161-synthetic.mjs';
 
 const CLI = new URL('../tools/spec-drift-gate.mjs', import.meta.url).pathname;
@@ -65,17 +66,20 @@ function listen(handler) {
   });
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
 }
-function run(server, args) {
+function spawnGate(server, args) {
   const url = 'http://127.0.0.1:' + server.address().port + '/functions/v1/mcp';
   return new Promise((resolve) => {
-    const c = spawn(process.execPath, [CLI, '--keys', keysPath, ...args], {
+    const c = spawn(process.execPath, [CLI, ...args], {
       env: { ...process.env, REQPUB_MCP_URL: url, REQPUB_MCP_KEY: 'test-bearer' },
     });
     let stdout = '', stderr = '';
     c.stdout.on('data', (d) => { stdout += d; });
     c.stderr.on('data', (d) => { stderr += d; });
-    c.on('close', (status) => resolve({ status, stdout, stderr }));
+    c.on('close', (status) => resolve({ status, stdout, stderr, host: new URL(url).host }));
   });
+}
+function run(server, args) {
+  return spawnGate(server, ['--keys', keysPath, '--trust-local-keys', ...args]);
 }
 async function withServer(handler, args) {
   const server = await listen(handler);
@@ -189,6 +193,67 @@ test('a timestamp token that is present and invalid fails the gate', async () =>
   assert.equal(r.status, 1, r.stdout);
   assert.ok(r.stdout.includes('timestamps: fail'));
   assert.equal(r.stdout.includes('OK  committed'), false);
+});
+
+test('a local --keys file without --trust-local-keys is refused', async () => {
+  const server = await listen(handlerFor(baseline(), receiptAnswer(receiptFor(FP))));
+  try {
+    const r = await spawnGate(server, ['--keys', keysPath, '--project', 'p1', '--file', committed(FP)]);
+    assert.equal(r.status, 1, r.stderr + r.stdout);
+    assert.ok(r.stdout.includes('REFUSED  --keys'));
+    assert.ok(r.stdout.includes('--trust-local-keys'));
+    assert.ok(r.stdout.includes(PUBLISHED_KEYS_URL));
+    assert.ok(r.stderr.includes('REFUSED  --keys'));
+    assert.ok(r.stdout.includes('mcp host: ' + r.host), r.stdout);
+    assert.equal(r.stdout.includes('receipt signature: pass'), false);
+    assert.equal(r.stdout.includes('OK  committed'), false);
+    assertNoPublishedKey(r);
+  } finally { server.close(); }
+});
+
+test('a local --keys file with --trust-local-keys passes and the warning is in the verdict', async () => {
+  const receipt = receiptFor(FP);
+  const r = await withServer(handlerFor(baseline(), receiptAnswer(receipt)), ['--project', 'p1', '--file', committed(FP)]);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.ok(r.stdout.includes(TRUST_LOCAL_KEYS_WARNING), r.stdout);
+  assert.ok(r.stderr.includes(TRUST_LOCAL_KEYS_WARNING), r.stderr);
+  assert.ok(r.stdout.includes('mcp host: ' + r.host), r.stdout);
+  assert.ok(r.stdout.includes('receipt signature: pass'));
+  assert.ok(r.stdout.includes('OK  committed requirements.json is baseline v2.0'));
+  assertNoPublishedKey(r);
+});
+
+test('the published key fetch is mocked and a body that misses the pin is not used', async () => {
+  const body = readFileSync(new URL('../reqpub-keys.json', import.meta.url));
+  assert.equal(createHash('sha256').update(body).digest('hex'), PUBLISHED_KEYS_SHA256);
+  let seen;
+  const keys = await fetchPublishedKeys({
+    fetchFn: async (url) => {
+      seen = url;
+      return { ok: true, text: async () => body.toString('utf8') };
+    },
+  });
+  assert.equal(seen, 'https://reqpub.com/reqpub-keys.json');
+  assert.equal(seen, PUBLISHED_KEYS_URL);
+  assert.deepEqual(keys.map((k) => k.kid), ['acc-1', 'whk-1']);
+  let used = false;
+  await assert.rejects(
+    () => fetchPublishedKeys({
+      fetchFn: async () => ({
+        ok: true,
+        text: async () => {
+          used = true;
+          return '{"keys":[{"kid":"forged","alg":"Ed25519","publicKeySpkiBase64":"aa"}]}';
+        },
+      }),
+    }),
+    (err) => err && err.code === 1 && /does not match the pinned/.test(err.message) && /were not used/.test(err.message),
+  );
+  assert.equal(used, true);
+  await assert.rejects(
+    () => fetchPublishedKeys({ fetchFn: async () => { throw new Error('offline'); } }),
+    (err) => err && err.code === 2 && /cannot fetch published keys/.test(err.message),
+  );
 });
 
 test('a sealed baseline whose receipt cannot be fetched exits 2', async () => {
