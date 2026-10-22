@@ -30,6 +30,31 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const read = (p) => { try { return readFileSync(join(ROOT, p), 'utf8'); } catch { return null; } };
 const has = (p) => existsSync(join(ROOT, p));
 
+/* Count published on the live homepage, keyed by the "as of vX.Y.Z" label.
+   A release that changes the label records its count here in the same change. */
+export const RELEASED_SITE_CHECKS = { 'v3.2.0': 1486 };
+
+/* Violations for the homepage checks sentence. Empty means the label is in
+   the map and the count equals that entry. */
+export function checkReleasedSiteCount(visible, released = RELEASED_SITE_CHECKS) {
+  const out = [];
+  const claimed = /([\d,]{3,7})\s+automated checks[\s\S]{0,500}?\(as of (v\d+\.\d+\.\d+)\)/.exec(String(visible || ''));
+  if (!claimed) {
+    out.push('COUNT   index.html has no "N automated checks ... (as of vX.Y.Z)" sentence');
+    return out;
+  }
+  const stated = Number(claimed[1].replace(/,/g, ''));
+  const version = claimed[2];
+  if (!Object.prototype.hasOwnProperty.call(released, version)) {
+    out.push(`COUNT   index.html says as of ${version}, which has no entry in RELEASED_SITE_CHECKS`);
+    return out;
+  }
+  if (stated !== released[version]) {
+    out.push(`COUNT   index.html claims ${stated} automated checks as of ${version}; the released site figure is ${released[version]}`);
+  }
+  return out;
+}
+
 /* Published surfaces: everything a reader can see. */
 /* The public site. Four stale claims survived here for months because this
    gate only read documentation: the verify page said sealing was "coming
@@ -215,14 +240,14 @@ if (modelHits.length) violations.push(`NOMODEL the no-AI claim is contradicted b
      when it exists rather than trusting a typed number. */
   const counts = existsSync(join(ROOT, 'tests/COUNTS.json'))
     ? JSON.parse(read('tests/COUNTS.json')) : null;
-  const claimed = /([\d,]{3,7})\s+automated checks/.exec(visible);
-  if (claimed && counts) {
-    const stated = Number(claimed[1].replace(/,/g, ''));
-    const truth = (counts.unit || 0) + (counts.backend || 0);
-    if (stated !== truth) {
-      violations.push(`COUNT   index.html claims ${stated} automated checks; the suites recorded ${truth} in tests/COUNTS.json`);
-    }
-  }
+  /* index.html is the live site. "N automated checks ... (as of vX.Y.Z)" is
+     the figure published with that release. The map records the count for
+     each release label. A label with no entry, or a count that is not the
+     entry, fails. tests/COUNTS.json is the working tree and is what README
+     must match. Adding a test does not rewrite index.html. A release that
+     publishes a new count adds the new label and its count together. The
+     "of them against a real Postgres" figure below still tracks counts.backend. */
+  violations.push(...checkReleasedSiteCount(visible));
   /* F1: the README rotted because no gate read it. Any figure adjacent to
      "checks" or "suites" must equal the recorded value. */
   if (counts) {
@@ -363,16 +388,18 @@ for (const f of LINK_SURFACES) {
   }
 }
 
-if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ claims: rows, violations, checkedFiles: PUBLISHED.length, linksChecked: seen.size }, null, 2));
-  process.exit(violations.length ? 1 : 0);
-}
+if (process.argv[1] && /claims-gate\.mjs$/.test(process.argv[1])) {
+  if (process.argv.includes('--json')) {
+    console.log(JSON.stringify({ claims: rows, violations, checkedFiles: PUBLISHED.length, linksChecked: seen.size }, null, 2));
+    process.exit(violations.length ? 1 : 0);
+  }
 
-if (violations.length) {
-  for (const v of violations) console.error('CLAIMS GATE  ' + v);
-  console.error(`claims gate: ${violations.length} violation${violations.length === 1 ? '' : 's'}; a claim that cannot be tied to an artifact and a test has to be edited`);
-  process.exit(1);
+  if (violations.length) {
+    for (const v of violations) console.error('CLAIMS GATE  ' + v);
+    console.error(`claims gate: ${violations.length} violation${violations.length === 1 ? '' : 's'}; a claim that cannot be tied to an artifact and a test has to be edited`);
+    process.exit(1);
+  }
+  console.log(`claims gate: ${rows.length} published claims, each tied to an existing artifact and a named test; ` +
+    `${seen.size} published paths resolve; no banned phrase in ${PUBLISHED.length + SITE.length} published surfaces and no stale promise on the site; ` +
+    `the no-model claim holds by grep across ${APP_DIRS.length} source trees`);
 }
-console.log(`claims gate: ${rows.length} published claims, each tied to an existing artifact and a named test; ` +
-  `${seen.size} published paths resolve; no banned phrase in ${PUBLISHED.length + SITE.length} published surfaces and no stale promise on the site; ` +
-  `the no-model claim holds by grep across ${APP_DIRS.length} source trees`);

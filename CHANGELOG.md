@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+**The spec drift gate requires a seal, then checks the receipt.**
+`tools/spec-drift-gate.mjs` refuses an unsealed baseline unless
+`--allow-unsealed` is set, which prints a warning. `--require-sealed` is
+still accepted and changes nothing. That opt-out is visible in the
+operator's CI log only. A client-visible record would be a server change,
+and this gate does not make it. Before a pass, the gate reads the
+receipt over MCP and verifies the Ed25519 signature and the receipt
+fingerprint with `tools/reqpub-verify-lib.mjs`, against the keyset fetched
+from `https://reqpub.com/reqpub-keys.json` when its SHA-256 matches the pin
+in the gate. A local `--keys` file is refused unless `--trust-local-keys`
+is set, which warns that a builder-controlled file can make a forged
+receipt pass. The verdict names the MCP host the gate called.
+`reqpub_get_receipt` does not return the timestamp tokens; their absence
+is reported as not verifiable over MCP and does not, by itself, fail the
+gate. A token the answer does include is checked, and an invalid one fails
+the gate. The live homepage check count stays 1,486 under the label
+v3.2.0. The claims gate keeps that figure in a map keyed by release
+label, and a label with no entry fails.
+
 ## 3.2.0
 
 The engineering seam release. Two engineering papers describe the pod that
