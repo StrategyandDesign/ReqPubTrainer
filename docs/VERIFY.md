@@ -4,9 +4,11 @@ This document specifies, completely, how a ReqPub baseline fingerprint is
 computed, so that anyone holding an exported bundle can recompute it with no
 ReqPub code and no ReqPub service. The repository ships two independent
 checkers built from this page. One is the browser page at `/verify.html`, which
-runs the app's own code, and `tools/reqpub-verify.mjs`, a single-file Node
-script that imports nothing from ReqPub. And CI asserts on every push that
-both agree byte for byte on a bundle produced by the current export code.
+runs the app's own code, and `tools/reqpub-verify.mjs`, a Node script that
+imports nothing from the ReqPub application. The recipe itself is
+`tools/reqpub-verify-lib.mjs`, which the command and the spec drift gate
+share. CI asserts on every push that the browser page and the command
+agree byte for byte on a bundle produced by the current export code.
 That gate is what keeps this document true: the spec cannot drift from the
 implementation without the build failing.
 
@@ -72,7 +74,7 @@ from the bundle). It is defined recursively:
 7. **No whitespace** appears anywhere outside string content.
 
 The reference implementation is `canonicalJson` in `app/js/core.js` (23
-lines). `tools/reqpub-verify.mjs` reimplements it from this page alone.
+lines). `tools/reqpub-verify-lib.mjs` reimplements it from this page alone.
 
 ## 4. Hashing
 
@@ -241,11 +243,31 @@ To verify a receipt bundle offline, three steps:
 
 `node tools/reqpub-verify.mjs <extracted-receipt-directory>` performs steps 1,
 2 and 3 from this document alone, on Node builtins, importing nothing from
-ReqPub (v3.1; before it, step 3 was delegated to openssl entirely), and
+the ReqPub application (the recipe is `tools/reqpub-verify-lib.mjs`; v3.1
+read the token, and before that step 3 was delegated to openssl entirely), and
 prints the openssl command for the chain-to-root decision on each token. A
 token the tool cannot read (a digest or signature algorithm outside the set
 above, or indefinite-length encoding) is reported as not checked, with that
 openssl command, and does not fail the receipt.
+
+The spec drift gate (`tools/spec-drift-gate.mjs`, documented in `docs/MCP.md`)
+runs the same seal check and the same token reader before it will pass a
+committed requirements.json. Sealed is required by default. `--require-sealed`
+is accepted and changes nothing. `--allow-unsealed` is the opt-out: the gate
+prints a warning and will accept a baseline whose sealed value is not true.
+The gate passes only when the committed fingerprint matches the baseline, the
+receipt's Ed25519 signature verifies against the published key for its kid in
+`reqpub-keys.json`, and the fingerprint inside the receipt equals the baseline
+fingerprint.
+
+Timestamp limitation, over MCP only: `reqpub_get_receipt` returns the
+timestamp status and does not return the `.tsr` tokens. When those bytes are
+absent the gate prints `timestamps: not verifiable over MCP (status only)`
+and does not fail for that absence. A token the answer does include (base64
+`tsaPrimaryDer` / `tsaSecondaryDer`, or a similar field) is checked with step
+3 above and fails the gate when it is invalid. Returning the tokens is a
+server change; this document's gate does not make it. The offline command on
+a receipt directory is unchanged and still reads each `.tsr` file on disk.
 
 What the seal proves: this receipt content was signed by the holder of the
 ReqPub key named by its kid, and, where timestamps are present, existed at

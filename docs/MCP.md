@@ -49,8 +49,11 @@ that baseline: signerName, signerRole, status, sentAt, signedAt, and
 receiptId once sealed.
 
 reqpub_get_receipt. receiptId. The stored receipt JSON, its Ed25519
-signature, the signing key id, and the timestamp status. Verify offline
-per VERIFY.md against the published reqpub-keys.json.
+signature, the signing key id, and the timestamp status. It does not
+return the RFC 3161 `.tsr` tokens. Verify offline per VERIFY.md against
+the published reqpub-keys.json. A caller that needs the tokens reads them
+from a receipt bundle; the spec drift gate, below, says what it does when
+the MCP answer has status only.
 
 reqpub_verify_chain. projectId. Runs the project's activity-chain
 verification and returns its output verbatim.
@@ -77,14 +80,43 @@ The pod commits requirements.json from the implementation package and runs
 `tools/spec-drift-gate.mjs` in its pipeline:
 
     REQPUB_MCP_URL=https://<ref>.supabase.co/functions/v1/mcp \
-    REQPUB_MCP_KEY=rqp_live_... \
-    node tools/spec-drift-gate.mjs --project <project id> --file spec/requirements.json [--seq N] [--require-sealed]
+    REQPUB_MCP_KEY=${REQPUB_MCP_KEY} \
+    node tools/spec-drift-gate.mjs --project <project id> --file spec/requirements.json [--seq N] [--require-sealed] [--allow-unsealed]
 
-Exit 0 when the committed fingerprint equals the baseline's; exit 1 on
-drift, on an unsealed baseline where one is required, or on a project that
-refuses the read; exit 2 when the gate could not run. It reads and never
-writes. The key is a read key issued on the Share page, held as a pipeline
-secret, revocable at once.
+`${REQPUB_MCP_KEY}` in that example is a placeholder for the pipeline
+secret. Requiring a sealed baseline is the default. The gate reads the
+baseline with reqpub_get_baseline, checks the committed fingerprint and,
+when the committed file carries one, the label, and checks that `sealed`
+is true. `--require-sealed` is accepted and changes nothing, so a pipeline
+that already passes it keeps working. `--allow-unsealed` is the opt-out:
+the gate prints a warning and will accept a baseline whose `sealed` value
+is not true. Passing both flags still opts out, because `--require-sealed`
+does not override it. The opt-out does not skip receipt verification when
+a receipt is there.
+
+Before a pass, the gate calls reqpub_get_receipt for each receipt id on
+that baseline and verifies the answer locally with `tools/reqpub-verify-lib.mjs`,
+the same code as `tools/reqpub-verify.mjs`. It passes only when the
+fingerprint matches, the receipt's Ed25519 signature verifies against the
+published key for its kid in `reqpub-keys.json`, and the fingerprint inside
+the receipt equals the baseline fingerprint. It prints a verdict line for
+fingerprint, label, sealed, receipt signature, receipt fingerprint, and
+timestamps.
+
+reqpub_get_receipt currently returns timestamp status and not the `.tsr`
+bytes. When no token is present the gate prints `timestamps: not verifiable
+over MCP (status only)` and does not fail on that alone. When a token is
+present (base64 `tsaPrimaryDer` or `tsaSecondaryDer`, or a similar field),
+the gate verifies it with the offline `.tsr` reader and fails on any invalid
+token. Returning those bytes is a server change this gate does not make.
+
+Exit 0 when every check passes. Exit 1 on drift, on a label mismatch, on an
+unsealed baseline without the opt-out, on a receipt signature that does not
+verify, on a receipt fingerprint that is not the baseline's, on an invalid
+timestamp token, or on a project that refuses the baseline read. Exit 2 when
+the gate could not run, including when a receipt the baseline names cannot
+be fetched. It reads and never writes. The key is a read key issued on the
+Share page, held as a pipeline secret, revocable at once.
 
 ## Exclusions, stated as promises
 
