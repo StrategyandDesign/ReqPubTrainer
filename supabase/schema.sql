@@ -4132,7 +4132,10 @@ returns jsonb language sql stable security definer set search_path = public as $
       join acceptance_receipts r on r.sign_request_id = s.id
       where s.version_id = p_version and s.revoked = false and s.status = 'signed'), '[]'::jsonb));
 $$;
-revoke execute on function version_sealed(uuid) from public;
+-- Supabase's standing default grants every new function to anon and
+-- authenticated; a revoke from public alone leaves those in place (the 0030
+-- pattern names all three).
+revoke execute on function version_sealed(uuid) from public, anon, authenticated;
 do $$ begin
   if exists (select 1 from pg_roles where rolname = 'service_role') then
     execute 'grant execute on function version_sealed(uuid) to service_role';

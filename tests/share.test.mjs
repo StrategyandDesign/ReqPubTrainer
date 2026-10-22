@@ -29,13 +29,41 @@ const project = { name: 'RecordMade' };
 test('default selection matches the preselected set', () => {
   const d = defaultBriefSections();
   assert.deepEqual(d, ['building', 'goals', 'who', 'solution', 'willdo', 'oos']);
-  assert.equal(BRIEF_SECTIONS.length, 10);
+  assert.equal(BRIEF_SECTIONS.length, 11);
   assert.ok(!d.includes('aieval'), 'AI acceptance is deliberate disclosure, never a default');
+  assert.ok(!d.includes('record'), 'the discovery record is deliberate disclosure too');
+});
+
+test('v3.2: the signature payload carries the discovery record with permanent ids, the test columns and the threshold method; a default brief carries none of it', () => {
+  const a = { ...answers,
+    fr: [{ _k: 3, stmt: 'Records a session', fit: 'INTERNAL FIT', input: 'Case 4471', expected: 'Session persists', pri: 'Must', comp: 'Recorder' }],
+    eval: [{ ...answers.eval[0], grader: 'Desk lead', pass_rate: '19 of 20' }],
+    metrics: [{ _k: 1, metric: 'Completion', target: '75%', method: 'Analytics', baseline: '61% on 40 sessions', comparison: 'Matched clinic' }],
+    ranking: [{ _k: 7, problem: 'Quote desk', mechanism: 'hours to quote', gap: '11h', rank: '1', status: 'Taken forward', _by: 'Micah' }],
+    clearance: [{ _k: 1, item: 'Masked data', scope: 'Read only', approver: 'R. Patel, Security', date: '2026-10', status: 'Approved' }],
+    controls: [{ _k: 2, constraint: 'ERP only', owner: 'Security', fit: 'Inspection.', negotiable: 'No' }] };
+  const p = buildSharePayload(project, a, '2.0', 2, 'present', '', null);
+  assert.equal(p.answers.ranking[0].id, 'RANK-007', 'the id the record prints, not the position');
+  assert.equal(p.answers.fr[0].input, 'Case 4471');
+  assert.equal(p.answers.eval[0].pass_rate, '19 of 20');
+  assert.ok(!JSON.stringify(p).includes('"_'), 'no bookkeeping key leaves');
+  const md = bBrief(p.answers, p.sections);
+  assert.ok(md.includes('## The discovery record'));
+  assert.ok(md.includes('- **RANK-007 1. Quote desk**: Mechanism hours to quote. Priced gap 11h. Taken forward'));
+  assert.ok(md.includes('- **CLR-001 Masked data**: Read only. Approved by R. Patel, Security'));
+  assert.ok(md.includes('- **CON-002 ERP only**: Security. Fit Inspection. Non negotiable'));
+  assert.ok(md.includes('**Input:** Case 4471 **Expected:** Session persists'));
+  assert.ok(md.includes('Grader Desk lead. Pass rate 19 of 20'));
+  assert.ok(md.includes('Baseline 61% on 40 sessions. Compared by Matched clinic'));
+  const brief = buildSharePayload(project, a, '2.0', 2, 'brief', '', defaultBriefSections());
+  assert.equal(brief.answers.ranking, undefined, 'a default brief carries no discovery record');
+  assert.equal(brief.answers.fr[0].input, undefined, 'a brief carries no test input');
+  assert.ok(!bBrief(brief.answers, brief.sections).includes('discovery record'));
 });
 
 test('unscoped payload (legacy path) includes every section and says so', () => {
   const p = buildSharePayload(project, answers, '1.0', 1, 'brief', '', null);
-  assert.equal(p.sections.length, 10);
+  assert.equal(p.sections.length, 11);
   assert.equal(p.answers.ov_vision, 'THE VISION');
   assert.equal(p.answers.metrics[0].metric, 'Completion');
 });

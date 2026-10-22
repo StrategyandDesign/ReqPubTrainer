@@ -606,7 +606,19 @@ export function buildSharePayload(project, answers, versionLabel, seq, kind, bui
   if (secs.includes('pieces')) ca.components = filled(answers.components).map((c) => ({ name: c.name, desc: c.desc }));
   // AI acceptance is deliberate disclosure: the client signs {dimension,
   // metric, threshold}. Component tags do not ride along.
-  if (secs.includes('aieval')) ca.eval = filled(answers.eval).map((r) => ({ dim: r.dim || '', metric: r.metric || '', thresh: r.thresh || '', dataset: r.dataset || '' }));
+  if (secs.includes('aieval')) ca.eval = filled(answers.eval).map((r) => ({ dim: r.dim || '', metric: r.metric || '', thresh: r.thresh || '', dataset: r.dataset || '',
+    // v3.2 The grader and the pass rate ride where the pass condition does.
+    ...(kind === 'present' ? { grader: r.grader || '', pass_rate: r.pass_rate || '' } : {}) }));
+  // v3.2 The discovery record travels with its permanent ids, shaped from
+  // the rows as stored; a signer reads RANK-001 as the record prints it.
+  if (secs.includes('record')) {
+    const idOf = (pre, r, i) => pre + '-' + String(r._k != null ? r._k : i + 1).padStart(3, '0');
+    ca.ranking = filled(answers.ranking).map((r, i) => ({ id: idOf('RANK', r, i), rank: r.rank || '', problem: r.problem || '', mechanism: r.mechanism || '', gap: r.gap || '', status: r.status || '' }));
+    ca.clearance = filled(answers.clearance).map((r, i) => ({ id: idOf('CLR', r, i), item: r.item || '', scope: r.scope || '', approver: r.approver || '', date: r.date || '', status: r.status || '' }));
+    ca.findings = filled(answers.findings).map((r, i) => ({ id: idOf('FND', r, i), finding: r.finding || '', contradicts: r.contradicts || '', source: r.source || '', owner: r.owner || '', kind: r.kind || '' }));
+    ca.controls = filled(answers.controls).map((r, i) => ({ id: idOf('CON', r, i), constraint: r.constraint || '', owner: r.owner || '', fit: r.fit || '', negotiable: r.negotiable || 'No' }));
+    ca.returns = filled(answers.returns).map((r, i) => ({ id: idOf('REL', r, i), build: r.build || '', fingerprint: r.fingerprint || '', result: r.result || '', notes: r.notes || '', accepted: r.accepted || '', date: r.date || '' }));
+  }
   if (secs.includes('willdo')) {
     // Two disclosures. A brief (an SME or partner reviewing scope, and the
     // presentation link built from it) carries statements only. The
@@ -616,7 +628,7 @@ export function buildSharePayload(project, answers, versionLabel, seq, kind, bui
     // condition the signer is attesting to; until v3.1 the signer confirmed
     // a hash over text they could not see.
     ca.fr = (answers.fr || []).map((x) => kind === 'present'
-      ? { stmt: x.stmt || '', comp: x.comp || '', fit: x.fit || '', exec: x.exec || '' }
+      ? { stmt: x.stmt || '', comp: x.comp || '', fit: x.fit || '', exec: x.exec || '', input: x.input || '', expected: x.expected || '' }
       : { stmt: x.stmt || '', comp: x.comp || '' });
     if (!secs.includes('pieces')) ca.components = filled(answers.components).map((c) => ({ name: c.name }));
   }

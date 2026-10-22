@@ -15,7 +15,7 @@ green: eslint 0 errors, `npm run ci` 0, `npm test` 0, `npm run test:backend` 0.
 **Ahead of Workstream E**, close the interface execution gap: a headless
 browser in the backend chain that boots the real application against a seeded
 database, clicks every registered action, and asserts nothing throws. An
-outside reviewer named it as the widest gap between 1,481 passing checks and
+outside reviewer named it as the widest gap between 1,486 passing checks and
 "the features work", and they are right. It is recorded in `docs/ASSURANCE.md`
 and as an open item in `docs/STATUS.md`.
 

@@ -14,17 +14,16 @@
    record: every value is a cell a person wrote, placed under a key. */
 import { rowsFilled, idOf } from './domain.js';
 
-/* YAML scalars, quoted when anything in them could be read as structure. */
+/* YAML scalars. A bare lowercase identifier (a type, a tag the map itself
+   chose) prints plain; every other value is a JSON string, which YAML reads
+   as a double quoted scalar. Cells are what people typed: a leading %, a
+   leading dash, a lone space or a word YAML would read as a number or a
+   boolean all stay text this way. */
 const y = (v) => {
   const s = String(v == null ? '' : v);
-  if (s === '') return '""';
-  if (/^[A-Za-z0-9 ._()/%+-]+$/.test(s) && !/^(true|false|null|yes|no|on|off|~)$/i.test(s) && !/^[-+.]?\d/.test(s)) return s;
-  return JSON.stringify(s);
+  return /^[a-z][a-z0-9-]*$/.test(s) ? s : JSON.stringify(s);
 };
 const ylist = (arr) => '[' + arr.map(y).join(', ') + ']';
-/* OKF concept ids are file paths without .md; the row's permanent id is the
-   file name, so a link like /requirements/FR-003 is stable across versions. */
-const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'term';
 
 function concept({ path, type, title, description, tags, fields, body, meta }) {
   const fm = ['---', 'type: ' + y(type), 'title: ' + y(title)];
@@ -126,10 +125,13 @@ export function buildKnowledgeMap(input) {
       fields: [['Concerns', r.ref], ['Kind', r.kind], ['Options considered', r.options], ['Rationale', r.rationale], ['Decided by', r.owner], ['Date', r.date], ['Supersedes', r.supersedes]],
       meta: rowMeta(base, id, r) }), id, r.decision || '');
   });
-  rowsFilled(a.glossary).forEach((r) => {
-    const name = slug(r.term);
-    add('Glossary', concept({ path: 'glossary/' + name, type: 'term', title: r.term || '', description: r.def || '',
-      tags: ['glossary'], fields: [['Definition', r.def]], meta: { ...base, id: r.term || '' } }), r.term || '', r.def || '');
+  /* A term's file is named by its permanent row key, never by its words:
+     two terms that slug alike cannot collide, and a renamed term keeps its
+     path, which is its identity in every link that points at it. */
+  rowsFilled(a.glossary).forEach((r, i) => {
+    const id = idOf('TERM', r, i);
+    add('Glossary', concept({ path: 'glossary/' + id, type: 'term', title: r.term || '', description: r.def || '',
+      tags: ['glossary'], fields: [['Definition', r.def]], meta: { ...base, id } }), r.term || '', r.def || '');
   });
 
   /* index.md: no frontmatter beyond the bundle version, headed sections of

@@ -36,7 +36,10 @@ returns jsonb language sql stable security definer set search_path = public as $
       join acceptance_receipts r on r.sign_request_id = s.id
       where s.version_id = p_version and s.revoked = false and s.status = 'signed'), '[]'::jsonb));
 $$;
-revoke execute on function version_sealed(uuid) from public;
+-- Supabase's standing default grants every new function to anon and
+-- authenticated; a revoke from public alone leaves those in place (the 0030
+-- pattern names all three).
+revoke execute on function version_sealed(uuid) from public, anon, authenticated;
 do $$ begin
   if exists (select 1 from pg_roles where rolname = 'service_role') then
     execute 'grant execute on function version_sealed(uuid) to service_role';
@@ -187,5 +190,5 @@ grant execute on function evidence_gather(text) to authenticated;
 -- Ledger. Idempotent, like the rest of this file. The checksum is of the body
 -- above this block, so editing a shipped migration is detectable.
 insert into schema_migrations (version, name, checksum)
-values ('0031', 'handoff_and_export', '29c549c175140b3e9741dd8505c5e3e1ace8f653aee43307b4f7b7abe817a24d')
+values ('0031', 'handoff_and_export', '08c7395949f69c5c371d847751f4c98e7e0d8446592aaddce80d0f3e8e76ac73')
 on conflict (version) do update set name = excluded.name, checksum = excluded.checksum;

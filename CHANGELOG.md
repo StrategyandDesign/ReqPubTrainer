@@ -10,17 +10,25 @@ not at all. This release closes the seam in both directions and leaves the
 three rules untouched: no model call, a person approves everything that
 enters, nothing computed under the fingerprint.
 
-**The discovery record is signed content.** Five tables, under one unnumbered
-heading in both document shapes: Clearance (CLR), Ranked problems with
+**The discovery record is signed content.** Five tables under one heading,
+unnumbered in the requirements document and numbered in its place in the
+engagement charter, which stays contiguous: Clearance (CLR), Ranked problems with
 mechanism and priced gap (RANK), Findings against claims (FND), Control
 function constraints with an optional fit criterion (CON), and Release
 reviews with the build reference and the baseline fingerprint it read (REL).
 Rows in the snapshot, permanent ids, signed with the baseline, printed,
-diffed, packaged. Success metrics gain a baseline measure and a comparison
+diffed, packaged. A release review proposed by an agent lands in the Inbox
+like any proposal; a person records the row in the worksheet citing it. Success metrics gain a baseline measure and a comparison
 method, which is what a signed threshold is. Decisions gain Concerns (the
 row they decide) and Kind (Reconcile names where leadership and operators
-disagreed). An empty record prints byte for byte as before: a column no
-row fills stays out of the table.
+disagreed). A column no row fills stays out of its table, and a section with
+no rows stays out of the document, so a record that holds none of this
+prints as it did, apart from the identifier sentence in Section 5, which now
+names the new prefixes. The signature page and the printed client report
+carry the discovery record, the test columns, the grader and pass rate, and
+the baseline measure and comparison method, so what the signer reads is what
+the fingerprint covers; a brief for an SME carries none of it unless the
+team selects it.
 
 **Tests carry their cases.** Functional and non functional rows gain a test
 input and an expected result; evaluation rows gain a grader and a pass rate.
@@ -47,8 +55,8 @@ and every Inbox entry with its thread, as written, under the same leak rules;
 discovery.json and conversations.json join the pack and the close package.
 
 **Unbranded to the client.** A record with a brand label carries the
-practice's name on the cover, the sign page, the presentation link and the
-record of delivery, and no ReqPub mark. The verifier line keeps the tool's
+practice's name on the cover, the sign page, the presentation link, the
+weekly update pages and the record of delivery, and no ReqPub mark. The verifier line keeps the tool's
 name. The record of delivery now accepts the data URL logos the app stores
 and prints the objective the record holds.
 
@@ -58,7 +66,11 @@ testable constraint outside EARS each raise a readiness warning.
 
 Migration 0031_handoff_and_export.sql, idempotent, with its ledger row;
 every backend suite that replays an older migration ends its stack with it.
-Two help topics, three capabilities, three folded.
+version_sealed is revoked from anon and authenticated by name, because the
+platform's standing default grants every new function to both and a revoke
+from public alone leaves that in place. Two help topics, three capabilities,
+three folded. An independent review of the diff found twelve items, all
+fixed before release.
 
 Deploy: apply `0031_handoff_and_export.sql` first, then push, then redeploy
 all eight edge functions from the repository, each with the JWT setting its

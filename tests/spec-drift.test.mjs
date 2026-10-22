@@ -92,6 +92,15 @@ await test('a bad key, a missing file or a missing argument cannot pass: exit 2 
   assert.equal(noarg.status, 2); assert.ok(noarg.stderr.includes('--project'));
 });
 
+await test('an unreachable endpoint and a non-integer --seq are exit 2 with one line each, never a stack trace', async () => {
+  const down = await run(['--project', 'p1', '--file', file('d.json', FP, '2.0')], { REQPUB_MCP_URL: 'http://127.0.0.1:9/functions/v1/mcp' });
+  assert.equal(down.status, 2, down.stderr);
+  assert.ok(down.stderr.includes('cannot reach the MCP endpoint'));
+  assert.ok(!down.stderr.includes('    at '), 'no stack trace');
+  const seq = await run(['--project', 'p1', '--file', file('s.json', FP, '2.0'), '--seq', 'abc']);
+  assert.equal(seq.status, 2); assert.ok(seq.stderr.includes('--seq must be an integer'));
+});
+
 await test('the pure comparison never passes a file without a fingerprint, and reports a label mismatch under one fingerprint', async () => {
   assert.equal(compare({}, answers.p1).ok, false);
   const v = compare({ version: { label: '3.0' }, fingerprint: { value: FP } }, answers.p1);

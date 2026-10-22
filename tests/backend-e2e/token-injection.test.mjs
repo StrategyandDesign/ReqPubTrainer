@@ -66,7 +66,8 @@ try {
   await run(`set search_path = public, extensions`);
   await run(sql(rel('v1-backend.sql')));
   for (const f of ['schema.sql', 'migrations/0021_sealing.sql', 'migrations/0022_attachment_hash.sql', 'migrations/0023_webhooks.sql',
-                   'migrations/0024_mcp.sql', 'migrations/0025_evidence.sql', 'migrations/0026_book_practice.sql', 'migrations/0027_pursuit_lineage.sql', 'migrations/0028_authz_lockdown.sql', 'migrations/0029_ssrf_guard.sql'])
+                   'migrations/0024_mcp.sql', 'migrations/0025_evidence.sql', 'migrations/0026_book_practice.sql', 'migrations/0027_pursuit_lineage.sql', 'migrations/0028_authz_lockdown.sql', 'migrations/0029_ssrf_guard.sql',
+                   'migrations/0030_record_conformance.sql', 'migrations/0031_handoff_and_export.sql'])   // v3.1, v3.2: the shipped state sits on top of the replayed stack
     await run(sql(rel('../../supabase/' + f)));
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@cv.co')`);

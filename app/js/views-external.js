@@ -542,7 +542,7 @@ export function updateArtifactHTML(g) {
     (moved.length ? hr() + sec('What moved') + movedHtml : '') +
     (open.length || closed.length ? hr() + sec('Open on the record') + openHtml : '') +
     (p.next ? hr() + sec('Next') + '<div style="font-size:13.5px;line-height:1.6">' + esc(p.next) + '</div>' : '') +
-    '<div style="border-top:1px solid var(--ink-2);margin-top:18px;padding-top:10px;font-size:10.5px;color:var(--ink-2);line-height:1.6">Produced from the ReqPub record' +
+    '<div style="border-top:1px solid var(--ink-2);margin-top:18px;padding-top:10px;font-size:10.5px;color:var(--ink-2);line-height:1.6">Produced from the ' + (p.brandLabel ? esc(p.brandLabel) + ' record' : 'ReqPub record') +
     ((p.baseline || {}).label ? ' · baseline v' + esc(p.baseline.label) : '') +
     ((p.baseline || {}).fp ? ' · fingerprint sha256:' + esc(String(p.baseline.fp).slice(0, 12)) + '\u2026' : '') +
     (g.publishedAt ? ' · published ' + esc(updFmtDay(g.publishedAt)) : '') +
@@ -655,7 +655,7 @@ export function updateDashboardHTML(g, ui) {
     '<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:9px;font-size:10.5px;color:var(--ink-2);line-height:1.6">Every value on this board was written by the team and frozen when this update was published' +
     (((g.payload || {}).baseline || {}).label ? ' \u00b7 baseline v' + esc(g.payload.baseline.label) : '') +
     (g.publishedAt ? ' \u00b7 published ' + esc(updFmtDay(g.publishedAt)) : '') +
-    ' \u00b7 the platform computes nothing here \u00b7 this link always renders exactly this update \u00b7 ReqPub v' + APP_VERSION + '</div></div>';
+    ' \u00b7 the platform computes nothing here \u00b7 this link always renders exactly this update' + (((g.payload || {}).brandLabel) ? '' : ' \u00b7 ReqPub v' + APP_VERSION) + '</div></div>';
 }
 
 /* The middle card, key era: two authored sections in the team's own words,
@@ -670,7 +670,7 @@ export function updKeyCardHTML(g) {
   return '<div class="card updkey" style="padding:22px 24px;margin-top:14px">' +
     '<div class="updkey-h">Key Updates</div>' + lines(key.updates) +
     '<div class="updkey-h" style="margin-top:20px">Key Questions</div>' + lines(key.questions) +
-    '<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:9px;font-size:11px;color:var(--ink-2)">Produced from the ReqPub record \u00b7 published ' + esc(updFmtDay(g.publishedAt)) + ' \u00b7 this link always renders exactly this update</div></div>';
+    '<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:9px;font-size:11px;color:var(--ink-2)">Produced from the ' + (((g.payload || {}).brandLabel) ? esc(g.payload.brandLabel) + ' record' : 'ReqPub record') + ' \u00b7 published ' + esc(updFmtDay(g.publishedAt)) + ' \u00b7 this link always renders exactly this update</div></div>';
 }
 
 /* One screen, then expand: each lower section renders as a slim bar; the

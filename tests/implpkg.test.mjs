@@ -251,7 +251,7 @@ test('CHANGES.md names changes on every id-bearing table, by permanent id and co
   assert.ok(md.includes('- CON-002'), 'a removed constraint is listed');
   const first = dby['CHANGES.md'];
   assert.ok(first.includes('7 discovery record rows'));
-  assert.ok(first.includes('1 decisions'));
+  assert.ok(first.includes('1 decision.'));
 });
 
 test('the knowledge map is an OKF 0.2 bundle: typed frontmatter on every concept, an index of links, a dated log', () => {
@@ -259,11 +259,11 @@ test('the knowledge map is an OKF 0.2 bundle: typed frontmatter on every concept
   assert.ok(idx.startsWith('---\nokf_version: "0.2"\n---'));
   assert.ok(idx.includes('## Ranked problems'));
   assert.ok(idx.includes('- [RANK-001](/discovery/ranking/RANK-001): Quote desk turnaround'));
-  assert.ok(idx.includes('- [Quote desk](/glossary/quote-desk): The three people'));
+  assert.ok(idx.includes('- [Quote desk](/glossary/TERM-001): The three people'));
   const fr = dby['knowledge/requirements/FR-001.md'];
   assert.ok(fr.startsWith('---\ntype: requirement\n'));
   assert.ok(fr.includes('  fingerprint: ' + 'a'.repeat(64)));
-  assert.ok(fr.includes('  author: Jane Roe'));
+  assert.ok(fr.includes('  author: "Jane Roe"'));
   assert.ok(fr.includes('  origin: sme'));
   assert.ok(fr.includes('**Test input.** Request #4471'));
   const log = dby['knowledge/log.md'];
@@ -275,6 +275,20 @@ test('the knowledge map is an OKF 0.2 bundle: typed frontmatter on every concept
     assert.ok(/\n---\n\n# /.test(f.text), f.name + ' closes its frontmatter before the title');
   }
   assert.ok(!dfiles.some((f) => /\.md$/.test(f.name) && /\/(index|log)\.md$/.test(f.name) && !/^knowledge\/(index|log)\.md$/.test(f.name)), 'reserved names appear only at the bundle root');
+});
+
+test('the knowledge map survives hostile cells: terms that slug alike, YAML-shaped values, empty terms', () => {
+  const hostile = buildImplementationFiles({ ...meta, prevAnswers: null, prevLabel: '', answers: { ...answers,
+    glossary: [{ _k: 1, term: 'Quote Desk', def: 'a' }, { _k: 2, term: 'quote-desk', def: 'b' }, { _k: 3, term: '', def: 'nameless' }, { _k: 4, term: '日本語', def: 'c' }, { _k: 5, term: 'index', def: 'd' }],
+    fr: [{ _k: 9, stmt: '% of clicks: under 1s', fit: '- none', input: ' ', expected: '.inf', pri: 'Must', comp: '- core' }] } });
+  const names = hostile.map((f) => f.name);
+  assert.equal(new Set(names).size, names.length, 'no two files share a name');
+  assert.ok(names.includes('knowledge/glossary/TERM-001.md') && names.includes('knowledge/glossary/TERM-002.md') && names.includes('knowledge/glossary/TERM-005.md'));
+  const fr = hostile.find((f) => f.name === 'knowledge/requirements/FR-009.md').text;
+  assert.ok(fr.includes('title: "FR-009 % of clicks: under 1s"'), 'a value YAML could misread is a quoted string');
+  assert.ok(fr.includes('description: "- none"'));
+  assert.ok(fr.includes('tags: [functional, "Must", "Human", "- core"]'));
+  assert.ok(/^type: requirement$/m.test(fr), 'a plain identifier stays plain');
 });
 
 test('the knowledge map is deterministic and carries the fingerprint on every file', () => {

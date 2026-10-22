@@ -3,12 +3,12 @@
   "format": "reqpub-check-counts",
   "formatVersion": 1,
   "version": "3.2.0",
-  "recordedAt": "2026-10-22T00:08:28.947Z",
-  "unit": 610,
+  "recordedAt": "2026-10-22T00:40:12.487Z",
+  "unit": 615,
   "unitSuites": 39,
   "backend": 871,
   "backendSuites": 35,
   "failed": 0,
-  "total": 1481,
-  "testsHash": "af07d7032c42b7c0"
+  "total": 1486,
+  "testsHash": "c3e9984cdd3ff6d9"
 }

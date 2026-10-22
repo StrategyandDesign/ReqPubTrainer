@@ -119,7 +119,7 @@ const ENG_OKRS = { key: 'okrs', title: 'Objectives and Key Results' };
 const ENG_UPDATES = { key: 'updates', title: 'Risks and Issues' };
 const ENG_DISCOVERY = { key: 'discovery', title: 'Discovery Record' };
 /* v3.2 The discovery record's five tables. Any filled row brings the section
-   into the charter; an empty record leaves every existing document byte
+   into the charter, numbered in its place; with none, the charter is byte
    for byte as it was. */
 export const DISCOVERY_FIELDS = ['clearance', 'ranking', 'findings', 'controls', 'returns'];
 export const hasDiscovery = (a) => !!a && DISCOVERY_FIELDS.some((k) => rowsFilled(a[k]).length > 0);
@@ -207,7 +207,7 @@ export const Q = [
   { id: 'ranking', sec: 'discovery', type: 'rows', prompt: 'Ranked problems', help: 'Each candidate problem, the commercial quantity it moves, the priced gap between the claimed process and the floor, and its rank. The accountable executive signs the baseline that carries this table. Each row keeps a permanent id (RANK-###).', add: 'Add problem', cols: [{ k: 'problem', l: 'Problem', ph: 'The problem as it operates on the floor' }, { k: 'mechanism', l: 'Mechanism', ph: 'e.g. hours from request to quote' }, { k: 'gap', l: 'Priced gap', ph: 'e.g. 11 hours per quote across 40 quotes a week' }, { k: 'rank', l: 'Rank', ph: '1' }, { k: 'status', l: 'Status', sel: ['Candidate', 'Taken forward', 'Deferred', 'Misnamed'] }] },
   { id: 'findings', sec: 'discovery', type: 'rows', prompt: 'Findings', help: 'What observation showed against what was claimed: a failed claim with the contradicting source beside it, a data gap, a drift found on return, or an exit. The claim stays on the record; the finding sits next to it. Each row keeps a permanent id (FND-###).', add: 'Add finding', cols: [{ k: 'finding', l: 'Finding', ph: 'What was observed' }, { k: 'contradicts', l: 'Contradicts', ph: 'The claim it contradicts, e.g. a discovery entry or FR-004' }, { k: 'source', l: 'Source', ph: 'Who showed it, or which data' }, { k: 'owner', l: 'Owner', ph: 'Who owns it now' }, { k: 'kind', l: 'Kind', sel: ['Failed claim', 'Data gap', 'Drift', 'Exit'] }] },
   { id: 'controls', sec: 'discovery', type: 'rows', prompt: 'Control function constraints', help: 'Limits the control functions place on any build: systems of record, data that may be read, identity and permission boundaries, regulatory rules. A constraint with a fit criterion is a test the suite carries, authored by its control function. General constraints stay in Assumptions, Dependencies, and Constraints. Each row keeps a permanent id (CON-###).', add: 'Add constraint', cols: [{ k: 'constraint', l: 'Constraint', ph: 'When X, the system shall ...' }, { k: 'owner', l: 'Control function', ph: 'e.g. Security, Jane Doe' }, { k: 'fit', l: 'Fit criterion', ph: 'Blank when it is not testable' }, { k: 'negotiable', l: 'Negotiable', sel: ['No', 'Yes'], def: 'No' }] },
-  { id: 'returns', sec: 'discovery', type: 'rows', prompt: 'Release reviews', help: 'Each build or model release run against the suite: the build reference, the baseline fingerprint the build read, the result, and the person who accepted it. An agent may propose a row through the Inbox; a person promotes it. Each row keeps a permanent id (REL-###).', add: 'Add release review', cols: [{ k: 'build', l: 'Build reference', ph: 'Commit, tag or release id' }, { k: 'fingerprint', l: 'Baseline fingerprint', ph: 'The sha256 the build pinned' }, { k: 'result', l: 'Suite result', sel: ['Pass', 'Fail', 'Partial'] }, { k: 'notes', l: 'Notes', ph: 'What failed, or what drifted' }, { k: 'accepted', l: 'Accepted by', ph: 'Name' }, { k: 'date', l: 'Date', ph: 'e.g. 2026-10' }] },
+  { id: 'returns', sec: 'discovery', type: 'rows', prompt: 'Release reviews', help: 'Each build or model release run against the suite: the build reference, the baseline fingerprint the build read, the result, and the person who accepted it. An agent may propose one through the Inbox; a person records the row here, citing the proposal. Each row keeps a permanent id (REL-###).', add: 'Add release review', cols: [{ k: 'build', l: 'Build reference', ph: 'Commit, tag or release id' }, { k: 'fingerprint', l: 'Baseline fingerprint', ph: 'The sha256 the build pinned' }, { k: 'result', l: 'Suite result', sel: ['Pass', 'Fail', 'Partial'] }, { k: 'notes', l: 'Notes', ph: 'What failed, or what drifted' }, { k: 'accepted', l: 'Accepted by', ph: 'Name' }, { k: 'date', l: 'Date', ph: 'e.g. 2026-10' }] },
 
   { id: 'assume', sec: 'adc', type: 'list', prompt: 'Assumptions', help: 'Conditions assumed true. If one proves false, add it to Risks and Issues on the Delivery board.', add: 'Add assumption', ph: 'An assumption' },
   { id: 'depend', sec: 'adc', type: 'list', prompt: 'Dependencies', help: 'Other systems, vendors, data, or decisions outside the team.', add: 'Add dependency', ph: 'A dependency' },
@@ -215,7 +215,7 @@ export const Q = [
 
   { id: 'fr', sec: 'functional', type: 'rows', prompt: 'Functional requirements', help: 'Each function as a single, testable requirement. Every requirement needs a fit criterion: the measurable condition that defines acceptance. A test input and an expected result turn the sentence into a case a Tester can run.', add: 'Add requirement', req: true, cols: [{ k: 'stmt', l: 'Requirement', ph: 'When the user does X, the system shall do Y.' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'The measurable acceptance condition. End with Test, Inspection, or Demonstration.' }, { k: 'input', l: 'Test input', ph: 'The case or data the test runs on' }, { k: 'expected', l: 'Expected result', ph: 'What a correct result is' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
 
-  { id: 'nfr', sec: 'nonfunctional', type: 'rows', prompt: 'Non-functional requirements', help: 'Quality requirements. Replace fast and secure with numbers and conditions. Consider performance, security, reliability, availability, scalability, accessibility, compliance.', add: 'Add requirement', cols: [{ k: 'stmt', l: 'Requirement', ph: 'Quality requirement with a number' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'Measured condition' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
+  { id: 'nfr', sec: 'nonfunctional', type: 'rows', prompt: 'Non-functional requirements', help: 'Quality requirements. Replace fast and secure with numbers and conditions. Consider performance, security, reliability, availability, scalability, accessibility, compliance.', add: 'Add requirement', cols: [{ k: 'stmt', l: 'Requirement', ph: 'Quality requirement with a number' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'Measured condition' }, { k: 'input', l: 'Test input', ph: 'The load, case or data the test runs on' }, { k: 'expected', l: 'Expected result', ph: 'What a correct result is' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
 
   { id: 'has_ai', sec: 'aieval', type: 'choice', prompt: 'Does the product include AI, probabilistic, or generative components?', options: ['Yes', 'No'], help: 'Such components cannot be verified by a single expected output. They need evaluation criteria against a golden dataset. This unlocks Section 9.', req: true },
   { id: 'eval', sec: 'aieval', type: 'rows', prompt: 'AI evaluation criteria', help: 'For each quality dimension, state the metric, the method, a numeric threshold, and the named eval set it is measured on, with its sampling rule. A threshold without a named set can be cherry-picked; a threshold on a named set is a number the client can sign. Always include a grounding or hallucination guardrail and a safety threshold.', add: 'Add criterion', cond: (a) => a.has_ai === 'Yes', cols: [{ k: 'dim', l: 'Quality dimension', ph: 'e.g. Hallucination guardrail' }, { k: 'metric', l: 'Metric and method', ph: 'What is measured and how' }, { k: 'thresh', l: 'Threshold', ph: 'e.g. at least 95%' }, { k: 'dataset', l: 'Eval set', ph: 'e.g. acceptance-set v3 · 100 cases · fixed sample' }, { k: 'grader', l: 'Grader', ph: 'Who or what scores a run, e.g. a named reviewer or a rubric' }, { k: 'pass_rate', l: 'Pass rate', ph: 'Required across repeated runs, e.g. 19 of 20' }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
@@ -466,8 +466,8 @@ function bSolution(a) {
   }
   return p.join('\n\n');
 }
-/* v3.2 A column that no row fills stays out of the printed table, so every
-   document baselined before the column existed prints as it always did. */
+/* v3.2 A column that no row fills stays out of the printed table, so a
+   table baselined before the column existed prints as it always did. */
 const anyFilled = (rows, k) => rows.some((r) => r && String(r[k] || '').trim());
 export function metricsTable(a) {
   const m = rowsFilled(a.metrics);
@@ -797,7 +797,11 @@ export const BRIEF_SECTIONS = [
   // absolutely, but an AI threshold is the number the client signs - the team
   // opts a brief into it per share. Backing fields are shaped in
   // buildSharePayload to {dim, metric, thresh} plus the golden-set statement.
-  { key: 'aieval', label: 'AI acceptance criteria', def: false, fields: ['eval', 'golden'] }
+  { key: 'aieval', label: 'AI acceptance criteria', def: false, fields: ['eval', 'golden'] },
+  // v3.2 The discovery record: what the executive signs (the ranking), what
+  // the control functions bound, what the floor showed. Off by default for a
+  // brief; the signature page and the printed client report carry it.
+  { key: 'record', label: 'Discovery record', def: false, fields: ['clearance', 'ranking', 'findings', 'controls', 'returns'] }
 ];
 export const defaultBriefSections = () => BRIEF_SECTIONS.filter((s) => s.def).map((s) => s.key);
 
@@ -840,7 +844,8 @@ export function bBrief(a, sections) {
   if (inc('aieval')) {
     const ev = rowsFilled(a.eval);
     const blk = [];
-    if (ev.length) blk.push(ev.map((r, i) => '- **' + idOf('EVAL', r, i) + ' ' + (r.dim || '') + '**: ' + (r.metric || '') + (r.thresh ? '. Threshold ' + r.thresh : '') + (r.dataset ? ' on ' + r.dataset : '') + ((r.exec && r.exec !== 'Human') ? ' \u00b7 executed by ' + r.exec.toLowerCase() : '')).join('\n'));
+    if (ev.length) blk.push(ev.map((r, i) => '- **' + idOf('EVAL', r, i) + ' ' + (r.dim || '') + '**: ' + (r.metric || '') + (r.thresh ? '. Threshold ' + r.thresh : '') + (r.dataset ? ' on ' + r.dataset : '') +
+      (r.grader ? '. Grader ' + r.grader : '') + (r.pass_rate ? '. Pass rate ' + r.pass_rate : '') + ((r.exec && r.exec !== 'Human') ? ' \u00b7 executed by ' + r.exec.toLowerCase() : '')).join('\n'));
     if (a.golden) blk.push('**Golden dataset and red-team method.** ' + a.golden);
     if (blk.length) P.push('## AI acceptance criteria\n\n' + blk.join('\n\n'));
   }
@@ -858,7 +863,10 @@ export function bBrief(a, sections) {
         // The pass condition, when the payload carries it (signature and
         // presentation pages). A brief payload omits fit and prints nothing.
         const fit = (r.fit && String(r.fit).trim()) ? ' **Fit:** ' + String(r.fit).trim() : '';
-        if (r.stmt && r.stmt.trim()) byc[c].push(r.stmt.trim() + tag + fit);
+        // v3.2 The case beside the pass condition, when the payload carries it.
+        const kase = (r.input && String(r.input).trim() ? ' **Input:** ' + String(r.input).trim() : '') +
+          (r.expected && String(r.expected).trim() ? ' **Expected:** ' + String(r.expected).trim() : '');
+        if (r.stmt && r.stmt.trim()) byc[c].push(r.stmt.trim() + tag + fit + kase);
       });
       const multi = order.length > 1 || (order.length === 1 && order[0] !== 'General');
       const blocks = order.filter((c) => byc[c].length).map((c) => (multi ? '**' + c + '**\n\n' : '') + byc[c].map((s) => '- ' + s).join('\n'));
@@ -867,7 +875,25 @@ export function bBrief(a, sections) {
   }
   if (inc('success')) {
     const mets = rowsFilled(a.metrics);
-    if (mets.length) P.push('## What success looks like\n\n' + mets.map((r) => '- **' + (r.metric || '') + '**' + (r.target ? ': ' + r.target : '') + (r.method ? ' (measured by ' + r.method + ')' : '')).join('\n'));
+    if (mets.length) P.push('## What success looks like\n\n' + mets.map((r) => '- **' + (r.metric || '') + '**' + (r.target ? ': ' + r.target : '') + (r.method ? ' (measured by ' + r.method + ')' : '') +
+      (r.baseline ? '. Baseline ' + r.baseline : '') + (r.comparison ? '. Compared by ' + r.comparison : '')).join('\n'));
+  }
+  // v3.2 The discovery record, as the signer reads it: each table a list,
+  // each row its permanent id and the cells a person wrote.
+  if (inc('record')) {
+    const blk = [];
+    const line = (id, main, rest) => '- **' + id + ' ' + main + '**' + (rest.filter(Boolean).length ? ': ' + rest.filter(Boolean).map((x) => String(x).trim().replace(/\.$/, '')).join('. ') : '');
+    const rk = rowsFilled(a.ranking);
+    if (rk.length) blk.push('**Ranked problems**\n\n' + rk.map((r, i) => line(r.id || idOf('RANK', r, i), (r.rank ? r.rank + '. ' : '') + (r.problem || ''), [r.mechanism ? 'Mechanism ' + r.mechanism : '', r.gap ? 'Priced gap ' + r.gap : '', r.status || ''])).join('\n'));
+    const cl = rowsFilled(a.clearance);
+    if (cl.length) blk.push('**Clearance**\n\n' + cl.map((r, i) => line(r.id || idOf('CLR', r, i), r.item || '', [r.scope || '', r.approver ? 'Approved by ' + r.approver : '', r.date || '', r.status || ''])).join('\n'));
+    const fd = rowsFilled(a.findings);
+    if (fd.length) blk.push('**Findings**\n\n' + fd.map((r, i) => line(r.id || idOf('FND', r, i), r.finding || '', [r.contradicts ? 'Contradicts ' + r.contradicts : '', r.source ? 'Source ' + r.source : '', r.owner ? 'Owner ' + r.owner : '', r.kind || ''])).join('\n'));
+    const co = rowsFilled(a.controls);
+    if (co.length) blk.push('**Control function constraints**\n\n' + co.map((r, i) => line(r.id || idOf('CON', r, i), r.constraint || '', [r.owner || '', r.fit ? 'Fit ' + r.fit : '', (r.negotiable || 'No') === 'Yes' ? 'Negotiable' : 'Non negotiable'])).join('\n'));
+    const rl = rowsFilled(a.returns);
+    if (rl.length) blk.push('**Release reviews**\n\n' + rl.map((r, i) => line(r.id || idOf('REL', r, i), r.build || '', [r.result || '', r.fingerprint ? 'Baseline ' + String(r.fingerprint).slice(0, 16) : '', r.accepted ? 'Accepted by ' + r.accepted : '', r.date || '', r.notes || ''])).join('\n'));
+    if (blk.length) P.push('## The discovery record\n\n' + blk.join('\n\n'));
   }
   if (inc('oos')) {
     const oos = (a.sol_out || []).filter(Boolean);

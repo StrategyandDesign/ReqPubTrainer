@@ -143,6 +143,16 @@ const call = (name, args) => ({ jsonrpc: '2.0', id: 7, method: 'tools/call', par
     && ctx.audits.join(',') === 'denied', ctx.audits);
 }
 {
+  const ctx = mkCtx({ mcp_gate: { ok: true }, mcp_get_baseline: { ok: false, error: 'unsealed', message: 'This project hands off only from a sealed baseline. Baseline v1.0 carries no sealed acceptance receipt.', label: '1.0' } });
+  const r = await handleRpc(call('reqpub_get_baseline', { projectId: 'p1' }), ctx);
+  check('v3.2: a refusal with a sentence behind it carries the sentence as "error: sentence", and audits denied',
+    r.body.result.isError === true && r.body.result.content[0].text === 'unsealed: This project hands off only from a sealed baseline. Baseline v1.0 carries no sealed acceptance receipt.'
+    && ctx.audits.join(',') === 'denied', r.body.result);
+  const ctx2 = mkCtx({ mcp_gate: { ok: true }, mcp_get_baseline: { ok: false, error: 'no_baseline', message: '' } });
+  const r2 = await handleRpc(call('reqpub_get_baseline', { projectId: 'p1' }), ctx2);
+  check('an empty sentence adds nothing to the reason', r2.body.result.content[0].text === 'no_baseline', r2.body.result);
+}
+{
   const ctx = mkCtx({ mcp_gate: { ok: true }, mcp_verify_chain: () => { throw new Error('boom with /internal/path secrets'); } });
   const r = await handleRpc(call('reqpub_verify_chain', { projectId: 'p1' }), ctx);
   check('a thrown error is a bare internal error, audited, with zero detail',

@@ -79,7 +79,7 @@ function commercialThresholds(answers) {
   const m = rowsFilled(answers.metrics).filter((r) => String(r.baseline || r.comparison || '').trim());
   if (!m.length) return '';
   return '## Commercial thresholds\n\n' +
-    'Each threshold names its mechanism, the baseline taken before the build, and the comparison method that separates market movement from system movement. The client measures the result by the method stated.\n\n' +
+    'Each threshold states its target, the baseline measure taken before the build, and the comparison method that separates market movement from system movement. The client measures the result by the method stated.\n\n' +
     mdTable(['Metric', 'Target', 'Measurement method', 'Baseline measure', 'Comparison method'],
       m.map((r) => [r.metric || '', r.target || 'to confirm', r.method || 'to confirm', r.baseline || 'to confirm', r.comparison || 'to confirm'])) + '\n\n';
 }
@@ -115,7 +115,7 @@ function changesMd(answers, meta, prevAnswers, prevLabel) {
     return '# v' + meta.label + ' - initial baseline\n\n' + fingerprintLine(meta) + '\n\n' +
       [j.fr.length + ' functional', j.nfr.length + ' non-functional', j.eval.length + ' AI acceptance', j.interfaces.length + ' interface']
         .join(' · ') + ' requirements' + (disc ? ' · ' + disc + ' discovery record ' + (disc === 1 ? 'row' : 'rows') : '') +
-      (rowsFilled(answers.decisions).length ? ' · ' + rowsFilled(answers.decisions).length + ' decisions' : '') + '.' + (meta.note ? '\n\n> ' + meta.note : '');
+      (rowsFilled(answers.decisions).length ? ' · ' + rowsFilled(answers.decisions).length + (rowsFilled(answers.decisions).length === 1 ? ' decision' : ' decisions') : '') + '.' + (meta.note ? '\n\n> ' + meta.note : '');
   }
   const rd = reqDiff(prevAnswers, answers, ALL_GROUPS);
   const detail = reqDiffDetail(prevAnswers, answers, ALL_GROUPS);

@@ -643,7 +643,7 @@ export function fieldHTML(APP, q, a, editingBy) {
             '<select class="input" data-rowfield="' + escA(q.id) + '" data-rowid="' + escA(r.id) + '" data-colkey="' + escA(c.k) + '" style="height:36px;padding:0 8px">' +
             '<option value="">Unassigned</option>' + comps.map((o) => '<option' + (val === o ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select></div>';
         }
-        const wide = ['stmt', 'fit', 'desc', 'obj', 'needs', 'req', 'metric', 'problem', 'finding', 'constraint', 'scope', 'input', 'expected', 'notes', 'rationale', 'options'].includes(c.k);
+        const wide = ['stmt', 'fit', 'desc', 'obj', 'needs', 'req', 'metric', 'problem', 'finding', 'constraint', 'scope', 'input', 'expected'].includes(c.k);
         return '<div' + (wide ? ' style="grid-column:1/-1"' : '') + '><div style="font-size:10.5px;color:var(--ink-4);font-weight:560;margin-bottom:3px">' + esc(c.l) + '</div>' +
           '<textarea class="input gta" rows="1" data-rowfield="' + escA(q.id) + '" data-rowid="' + escA(r.id) + '" data-colkey="' + escA(c.k) + '" placeholder="' + escA(c.ph || '') + '">' + esc(val) + '</textarea></div>';
       }).join('');
@@ -1028,7 +1028,7 @@ function renderChanges(APP, a) {
         ).join('') + '</div>').join('') + '</div>'
     : '';
   const reqBlock = (rd.added.length || rd.modified.length || rd.removed.length)
-    ? '<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg-2);margin-bottom:18px"><div style="font-size:13px;font-weight:600;margin-bottom:10px">Requirement-level changes</div>' + chip('Added', rd.added, true) + chip('Modified', rd.modified, false) + chip('Removed', rd.removed, false) + detailBlock + '</div>' : '';
+    ? '<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg-2);margin-bottom:18px"><div style="font-size:13px;font-weight:600;margin-bottom:10px">Row-level changes</div>' + chip('Added', rd.added, true) + chip('Modified', rd.modified, false) + chip('Removed', rd.removed, false) + detailBlock + '</div>' : '';
   return '<div class="page" style="max-width:560px"><h2 style="font-size:20px;letter-spacing:-.02em;font-weight:620;margin:0 0 4px">Changes in v' + esc(meta.label) + '</h2>' +
     '<p class="hint" style="margin:0 0 18px">' + (prevMeta ? 'Compared to v' + esc(prevMeta.label) + ', by ' + esc(meta.author_name || 'an unnamed editor') + '.' : 'Initial baseline. Every section is new.') + '</p>' +
     reqBlock + '<div class="eyebrow" style="font-size:9.5px;margin-bottom:8px">By section</div>' + rows + '</div>';

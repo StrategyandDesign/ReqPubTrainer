@@ -23,7 +23,7 @@ const flag = (name) => args.includes(name);
 export async function readBaseline({ url, key, projectId, seq, fetchFn = fetch }) {
   const body = { jsonrpc: '2.0', id: 1, method: 'tools/call',
     params: { name: 'reqpub_get_baseline', arguments: seq != null ? { projectId, seq } : { projectId } } };
-  const r = await fetchFn(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify(body) });
+  const r = await fetchFn(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
   const j = await r.json().catch(() => null);
   if (!j || j.error) return { ok: false, error: (j && j.error && j.error.message) || ('HTTP ' + r.status) };
   const content = j.result && j.result.content && j.result.content[0] && j.result.content[0].text;
@@ -67,8 +67,10 @@ export function compare(committed, baseline, { requireSealed = false } = {}) {
 async function main() {
   const url = process.env.REQPUB_MCP_URL, key = process.env.REQPUB_MCP_KEY;
   const projectId = opt('--project'), file = opt('--file', 'requirements.json');
-  const seq = opt('--seq') != null ? Number(opt('--seq')) : null;
+  const seqArg = opt('--seq');
+  const seq = seqArg != null ? Number(seqArg) : null;
   if (!url || !key || !projectId) { console.error('spec drift gate: REQPUB_MCP_URL, REQPUB_MCP_KEY and --project are required'); process.exit(2); }
+  if (seqArg != null && !Number.isInteger(seq)) { console.error('spec drift gate: --seq must be an integer, got ' + seqArg); process.exit(2); }
   let committed;
   try { committed = JSON.parse(readFileSync(file, 'utf8')); }
   catch (e) { console.error('spec drift gate: cannot read ' + file + ': ' + e.message); process.exit(2); }
@@ -83,4 +85,8 @@ async function main() {
   process.exit(v.ok ? 0 : 1);
 }
 
-if (process.argv[1] && /spec-drift-gate\.mjs$/.test(process.argv[1])) main();
+/* An endpoint that cannot be reached, or hangs past the timeout, is a gate
+   that could not run: exit 2, one line, no stack trace. */
+if (process.argv[1] && /spec-drift-gate\.mjs$/.test(process.argv[1])) {
+  main().catch((e) => { console.error('spec drift gate: cannot reach the MCP endpoint: ' + (e && e.message ? e.message : String(e))); process.exit(2); });
+}
