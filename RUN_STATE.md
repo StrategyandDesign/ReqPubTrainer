@@ -7,7 +7,7 @@ Keyed to the v3 specification.
 **A, B, C, D, F, G, H complete. E not started**, which is the workstream the
 brief marked optional and told me to drop if short.
 
-The tree is at **3.1.0** (the record conformance release) with every stamp in lockstep, and the full chain is
+The tree is at **3.2.0** (the engineering seam release) with every stamp in lockstep, and the full chain is
 green: eslint 0 errors, `npm run ci` 0, `npm test` 0, `npm run test:backend` 0.
 
 ## Exact next action
@@ -15,7 +15,7 @@ green: eslint 0 errors, `npm run ci` 0, `npm test` 0, `npm run test:backend` 0.
 **Ahead of Workstream E**, close the interface execution gap: a headless
 browser in the backend chain that boots the real application against a seeded
 database, clicks every registered action, and asserts nothing throws. An
-outside reviewer named it as the widest gap between 1,458 passing checks and
+outside reviewer named it as the widest gap between 1,481 passing checks and
 "the features work", and they are right. It is recorded in `docs/ASSURANCE.md`
 and as an open item in `docs/STATUS.md`.
 
@@ -34,10 +34,12 @@ None. Every change is complete.
 
 ## Version
 
-**3.1.0.** `package.json`, `package-lock.json`, `app/js/core.js`, both vendored
+**3.2.0.** `package.json`, `package-lock.json`, `app/js/core.js`, both vendored
 `core.js` copies and their generated function bundles, `app/js/capabilities.js`,
-`index.html`, `docs/STATUS.md`, and `tests/COUNTS.json` all read 3.1.0, and
-`CHANGELOG.md` carries the `## 3.1.0` entry that the capabilities gate resolves
+`index.html`, `docs/STATUS.md`, and `tests/COUNTS.json` all read 3.2.0, and
+`CHANGELOG.md` carries the `## 3.2.0` entry that the capabilities gate resolves
 `sinceVersion` against. The claims gate fails the build if any of them drifts.
-Production matches: migration 0030 applied, the site served from `main`, and
-the `mcp` and `seal-receipt` edge functions redeployed from the 3.1.0 bundles.
+Production matches once the deploy in `docs/releases/v3.2.md` is done:
+migration 0031 applied, the site served from `main`, and all eight edge
+functions redeployed from the repository with the JWT setting each header
+states.

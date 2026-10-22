@@ -540,6 +540,7 @@ function renderAccess(APP) {
   /* Agent access (MCP), manager only. Inert until a key exists. */
   const mcpKeys = APP.mcpKeys || [];
   const gateOn = !!(APP.fields && APP.fields.ctrl_mcp_propose && APP.fields.ctrl_mcp_propose.value === 'on');
+  const sealedOnly = !!(APP.fields && APP.fields.ctrl_signed_handoff && APP.fields.ctrl_signed_handoff.value === 'on');
   const mcpRows = mcpKeys.map((k) => {
     const dead = !!k.revoked_at;
     return '<div class="acc-row">'
@@ -565,6 +566,12 @@ function renderAccess(APP) {
     + (gateOn ? 'on: a key with propose can file into the Inbox here.' : 'off: even a propose key is refused here.') + '</span>'
     + '<button class="linkbtn" data-action="mcpproposetoggle">' + (gateOn ? 'Turn off' : 'Turn on') + '</button>'
     + '<button class="linkbtn" data-action="mcpcheck">Check endpoint</button></div>'
+    // v3.2 Signed handoff: the implementation package and reqpub_get_baseline
+    // refuse a baseline no client has signed and sealed. Authored control,
+    // stored like the propose gate, read server side by the MCP function.
+    + '<div class="acc-row"><span style="flex:1;font-size:11.5px;color:var(--ink-4)">Handoff is '
+    + (sealedOnly ? 'only from a sealed baseline: the implementation package and reqpub_get_baseline refuse a version with no sealed acceptance receipt.' : 'from any approved baseline. Turn this on so engineering builds only from a baseline the client has signed and sealed.') + '</span>'
+    + '<button class="linkbtn" data-action="signedhandofftoggle">' + (sealedOnly ? 'Turn off' : 'Turn on') + '</button></div>'
     + (mcpKeys.length ? '' : '<div class="acc-row"><span style="font-size:11.5px;color:var(--ink-4)">No keys. The MCP endpoint refuses every call until a key exists; nothing about the record is reachable. docs/MCP.md is the connection and tool reference.</span></div>');
 
   return '<div class="page" style="max-width:640px">' +

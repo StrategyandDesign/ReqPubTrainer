@@ -108,8 +108,10 @@ const gather = () => ({
   g.chronology = []; g.versions = []; g.signatures = []; g.receipts = []; g.attachments = []; g.keys = [];
   g.chain = { ok: true, head_seq: -1, head_hash: '', unchained: 0 };
   const { files } = await buildEvidencePack(g, { generatedAt: '2026-08-03T00:00:00Z' });
-  check('an empty record builds the eight base files and nothing more',
-    files.length === 9 && files.some((f) => f.name === 'manifest.json'));
+  check('an empty record builds the ten base files and nothing more',
+    files.length === 11 && files.some((f) => f.name === 'manifest.json'));
+  check('the discovery entries and the conversations are present even when empty',
+    files.some((f) => f.name === 'discovery.json') && files.some((f) => f.name === 'conversations.json'));
   const ev = parseCsvStrict(text(files.find((f) => f.name === 'evidence.csv')));
   check('empty evidence.csv is a lone header row', ev.length === 1);
 }

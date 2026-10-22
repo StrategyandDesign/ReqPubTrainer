@@ -40,6 +40,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0004_chain.sql')));
   await run(sql(rel('../../supabase/migrations/0021_sealing.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@victim.co'),('${MEM}','mem@victim.co'),('${ATT}','attacker@evil.co')`);
   await run(`insert into orgs(id,name,created_by) values ('${ORG}','Victim Co','${MGR}'),('${AORG}','Evil Co','${ATT}')`);

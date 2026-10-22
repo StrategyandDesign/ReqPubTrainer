@@ -41,9 +41,16 @@ function brandBanner(payload) {
     '<div style="display:flex;align-items:center;gap:12px;min-width:0">' +
     '<img src="' + escA(payload.logo) + '" alt="' + escA(payload.brandLabel || 'Client') + '" style="max-height:52px;max-width:200px;object-fit:contain">' +
     (payload.brandLabel ? '<span style="font-size:15px;font-weight:620;color:var(--ink);letter-spacing:-.01em">' + esc(payload.brandLabel) + '</span>' : '') + '</div>' +
-    '<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-2);flex:0 0 auto">' +
-    '<span class="brandmark" style="width:18px;height:18px;border-radius:5px"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>ReqPub</span></div>';
+    // v3.2 White label: with a brand label the banner is the practice's alone.
+    (payload.brandLabel ? '' : '<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-2);flex:0 0 auto">' +
+    '<span class="brandmark" style="width:18px;height:18px;border-radius:5px"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>ReqPub</span>') + '</div>';
 }
+/* v3.2 White label. The footer line under a client surface names the
+   practice when the record carries a brand label, and ReqPub otherwise. */
+const servedLine = (brandLabel, text) => brandLabel
+  ? '<div style="text-align:center;margin-top:24px;font-size:11.5px;color:var(--ink-2)">' + text + ' ' + esc(brandLabel) + '.</div>'
+  : '<div style="text-align:center;margin-top:24px;font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;justify-content:center;gap:6px">' +
+    '<span class="brandmark" style="width:16px;height:16px;border-radius:4px"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>' + text + ' ReqPub.</div>';
 
 const wrap = (inner, max) =>
   '<div style="min-height:100vh;background:var(--bg-2);padding:46px 20px"><div style="width:100%;max-width:' + (max || 600) + 'px;margin:0 auto">' + inner + '</div></div>' +
@@ -339,9 +346,7 @@ export function renderPresentShare(APP) {
     ? '<div class="card" style="padding:30px 34px">' + mdToHtml(md) + '</div>'
     : '<div class="card" style="padding:34px;color:var(--ink-2);font-size:14px;text-align:center">This presentation has no shared content yet.</div>')
     + walkthroughCard(p, APP.shareToken);
-  const foot = '<div style="text-align:center;margin-top:24px;font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;justify-content:center;gap:6px">' +
-    '<span class="brandmark" style="width:16px;height:16px;border-radius:4px"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>' +
-    'A read-only requirements record, published with ReqPub. This link cannot be edited.</div>';
+  const foot = servedLine(p.brandLabel, 'A read-only requirements record. This link cannot be edited. Published by');
   return wrap(head + body + foot, 780);
 }
 
@@ -425,9 +430,7 @@ function wrapSign(strip, panel, APP) {
     '<span class="pill pill-solid"><span class="mono">v' + esc(g.label || '?') + '</span></span>' +
     '<span class="eyebrow xd" style="font-size:9.5px">Requirements · for signature</span></div>' +
     '<h1 style="font-size:30px;letter-spacing:-.025em;font-weight:660;margin:0">' + esc(g.project || p.product || 'Untitled') + '</h1></div>';
-  const foot = '<div style="text-align:center;margin-top:24px;font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;justify-content:center;gap:6px">' +
-    '<span class="brandmark" style="width:16px;height:16px;border-radius:4px"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>' +
-    'A signature request on a fingerprinted requirements record, served by ReqPub.</div>';
+  const foot = servedLine(g.brandLabel, 'A signature request on a fingerprinted requirements record, served by');
   return wrap(practiceMark(g.practice) + strip + head + body + panel + foot, 780);
 }
 

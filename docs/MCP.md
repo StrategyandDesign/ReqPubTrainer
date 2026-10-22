@@ -36,7 +36,13 @@ reqpub_get_baseline. projectId, optional seq. The stored version row:
 label, seq, status, note, authorName, createdAt, the full snapshot, and
 the fingerprint computed with the published recipe in VERIFY.md.
 This is the spec an agent executes against: pin the fingerprint, do the
-work, check the fingerprint again before claiming conformance.
+work, check the fingerprint again before claiming conformance. Since
+3.2.0 the answer also states sealed (whether a signed, unrevoked request
+on the version holds an acceptance receipt), sealedBy (signer name, role,
+signed at, receipt id, timestamp status) and signedHandoff. A project with
+signed handoff on answers an unsealed version with the error unsealed and
+a sentence naming the baseline; the handler passes that sentence through
+as "unsealed: ..." in the tool error text.
 
 reqpub_get_signature_status. projectId, optional seq. Per sign request on
 that baseline: signerName, signerRole, status, sentAt, signedAt, and
@@ -64,6 +70,21 @@ turned on by a manager on the Share page and stored as an authored
 control field on the record. tools/list omits reqpub_propose unless the
 key allows it and at least one in-scope project has it on; the write
 itself re-checks both against live rows.
+
+## The spec drift gate
+
+The pod commits requirements.json from the implementation package and runs
+`tools/spec-drift-gate.mjs` in its pipeline:
+
+    REQPUB_MCP_URL=https://<ref>.supabase.co/functions/v1/mcp \
+    REQPUB_MCP_KEY=rqp_live_... \
+    node tools/spec-drift-gate.mjs --project <project id> --file spec/requirements.json [--seq N] [--require-sealed]
+
+Exit 0 when the committed fingerprint equals the baseline's; exit 1 on
+drift, on an unsealed baseline where one is required, or on a project that
+refuses the read; exit 2 when the gate could not run. It reads and never
+writes. The key is a read key issued on the Share page, held as a pipeline
+secret, revocable at once.
 
 ## Exclusions, stated as promises
 

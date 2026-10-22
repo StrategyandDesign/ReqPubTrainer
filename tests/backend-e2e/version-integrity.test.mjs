@@ -101,6 +101,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0019_version_integrity.sql')));
   await run(sql(rel('../../supabase/migrations/0019_version_integrity.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   await asUser(MGR); await run('set role authenticated');
   check('migrations/0019_version_integrity.sql closes a legacy install and runs twice cleanly',
     await denied(`update versions set status='approved' where id='${vid}'`));

@@ -169,6 +169,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0028_authz_lockdown.sql')));
   await run(sql(rel('../../supabase/migrations/0028_authz_lockdown.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   check('migrations/0028_authz_lockdown.sql applies twice on the full stack', true);
 
   /* ---- the exploit is refused ---- */

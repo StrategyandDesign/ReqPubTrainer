@@ -37,6 +37,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0018_updates.sql')));
   await run(sql(rel('../../supabase/migrations/0018_updates.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   check('migrations/0018_updates.sql applies twice cleanly on top of schema.sql',
     +(await one(`select count(*) c from pg_proc where proname='update_publish'`)).c === 1);
 

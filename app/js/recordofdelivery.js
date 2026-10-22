@@ -58,7 +58,11 @@ export function buildRecordOfDelivery(input) {
   const receiptFor = (signId) => receipts.find((r) => r && (r.sign_request_id === signId || r.signRequestId === signId)) || null;
 
   /* ---- what was agreed, as authored ---- */
-  const objective = String(a.ctrl_objective || a.overview_objective || a.objective || '').trim();
+  // v3.2 The record's own objective fields come first: ov_vision is the
+  // Objective in an engagement record and the Product vision in a PRD,
+  // ov_purpose its purpose line. The three legacy keys never existed in
+  // the question bank, so every close document printed no objective.
+  const objective = String(a.ov_vision || a.ov_purpose || a.ctrl_objective || a.overview_objective || a.objective || '').trim();
   const metricRows = Array.isArray(a.metrics) ? a.metrics.filter((m) => m && Object.values(m).some((v) => String(v || '').trim())) : [];
 
   const objectiveHTML = objective
@@ -136,7 +140,9 @@ export function buildRecordOfDelivery(input) {
   const mark = practice
     ? '<div class="rd-practice">PRACTICE RECORD &middot; a rehearsal, never evidence</div>'
     : '';
-  const logo = brand.logo && /^https:\/\//.test(String(brand.logo))
+  // v3.2 Stored logos are data URLs (the app downscales uploads into one), so
+  // the record of delivery accepts those as well as an https address.
+  const logo = brand.logo && /^(https:\/\/|data:image\/(png|jpe?g|gif|webp|svg\+xml);)/i.test(String(brand.logo))
     ? '<img class="rd-logo" src="' + escA(brand.logo) + '" alt="' + escA(brand.brandLabel || 'Client') + '">'
     : '';
 
@@ -158,7 +164,7 @@ export function buildRecordOfDelivery(input) {
     '</style></head><body>' +
     mark + logo +
     '<h1>Record of Delivery</h1>' +
-    '<p class="sub">' + esc(project.name) + (brand.brandLabel ? ' &middot; ' + esc(brand.brandLabel) : '') + ' &middot; ReqPub v' + esc(APP_VERSION) + '</p>' +
+    '<p class="sub">' + esc(project.name) + (brand.brandLabel ? ' &middot; ' + esc(brand.brandLabel) : ' &middot; ReqPub v' + esc(APP_VERSION)) + '</p>' +
     lineageHTML +
     '<h2>Objective</h2>' + objectiveHTML +
     '<h2>Success metrics</h2>' + metricsHTML +

@@ -59,6 +59,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0006_discovery_promote.sql')));
   await run(sql(rel('../../supabase/migrations/0006_discovery_promote.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   const back = await one(`select promoted_to from discovery_entries where takeaway like 'Pilot%'`);
   check('migrations/0006_discovery_promote.sql restores the column and runs twice cleanly', back.promoted_to === '', back);
 

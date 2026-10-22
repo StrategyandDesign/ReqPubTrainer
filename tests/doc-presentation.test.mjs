@@ -40,7 +40,7 @@ const html = mdToHtml(md);
 /* The golden order a full product record produces. Pinned as a literal:
    assemble() owns document composition, and this is its contract. Any
    reordering of the document is a deliberate, test-breaking act. */
-const GOLDEN_ORDER = ['overview', 'users', 'solution', 'metrics', 'method', 'adc',
+const GOLDEN_ORDER = ['overview', 'users', 'solution', 'metrics', 'discovery', 'method', 'adc',
   'functional', 'nonfunctional', 'data', 'interfaces', 'verification',
   'traceability', 'people', 'glossary', 'decisions', 'okrs', 'revision'];
 
@@ -63,6 +63,7 @@ test('numbering is stable per section: the exact golden sequence, ascending, gap
     'a section keeps its number whether or not its conditional neighbors render');
   for (let i = 1; i < nums.length; i++) assert.ok(nums[i] > nums[i - 1], 'strictly ascending');
   assert.ok(/<h2 id="docsec-okrs"[^>]*>(?!<span class="secn">)/.test(html), 'okrs renders unnumbered by design (num: null)');
+  assert.ok(/<h2 id="docsec-discovery"[^>]*>(?!<span class="secn">)/.test(html), 'the discovery record renders unnumbered by design (v3.2, num: null)');
 });
 
 test('the cover meta line renders once, before the first section', () => {

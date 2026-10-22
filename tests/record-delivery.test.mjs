@@ -21,7 +21,7 @@ const tpl = (f) => readFileSync(fileURLToPath(new URL('../templates/receivers/' 
 const full = {
   project: { id: 'p1', name: 'Riverbend rollout' },
   answers: {
-    ctrl_objective: 'Stand up a working acceptance record for the Riverbend rollout.',
+    ov_vision: 'Stand up a working acceptance record for the Riverbend rollout.',
     metrics: [{ metric: 'Submissions posted within one shift', target: 'at least 95%' }],
     eval: [{ dim: 'Hallucination guardrail', metric: 'grounded-answer rate, manual review',
              thresh: 'at least 95%', dataset: 'acceptance-set v3 \u00b7 100 cases', exec: 'Human' }],

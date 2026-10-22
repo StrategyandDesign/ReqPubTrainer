@@ -1,6 +1,6 @@
 # Status
 
-**Version 3.1.0. Assurance state: Self-attested.**
+**Version 3.2.0. Assurance state: Self-attested.**
 
 ## The definition of GA changed, and this says so
 
@@ -260,5 +260,5 @@ Closing it means a headless browser in the suites, driving the real
 application against a seeded database, clicking every registered action and
 asserting nothing throws. That is a real build and it is not started. It is
 listed here rather than in a backlog because it is the honest answer to
-someone who reads 1,458 passing checks and assumes the interface is covered.
+someone who reads 1,481 passing checks and assumes the interface is covered.
 

@@ -17,9 +17,24 @@ Have at hand: the Supabase dashboard for the existing project, and push access t
    [MIGRATIONS.md](MIGRATIONS.md).
 3. **Verify.** Run `supabase/verify.sql` and read its output. It reports the
    objects it expected and the ones it found.
-4. **Functions.** Deploy `mcp` and `seal-receipt` from their generated paste
-   files. Both run with verify JWT off; the MCP endpoint authenticates by
-   bearer key inside the function body.
+4. **Functions.** Deploy all eight edge functions from the repository, each
+   with the JWT setting its own header states; the first two from their
+   generated paste files under `dist/`:
+
+   | Function | Source | Verify JWT | Why |
+   | --- | --- | --- | --- |
+   | `mcp` | `supabase/functions/mcp/dist/index.ts` | off | the bearer key is checked inside the function |
+   | `seal-receipt` | `supabase/functions/seal-receipt/dist/index.ts` | off | the signer is accountless; the token is the credential |
+   | `send-sign-receipt` | `supabase/functions/send-sign-receipt/index.ts` | off | the signer is accountless |
+   | `walkthrough-image` | `supabase/functions/walkthrough-image/index.ts` | off | share readers have no account and no header; on, every image returns 401 |
+   | `attachment-upload` | `supabase/functions/attachment-upload/index.ts` | off | SMEs authorize with their reply token |
+   | `deliver-webhooks` | `supabase/functions/deliver-webhooks/index.ts` | off | the delivery id is the capability |
+   | `send-sign-request` | `supabase/functions/send-sign-request/index.ts` | on | a signed-in member sends mail |
+   | `send-invite` | `supabase/functions/send-invite/index.ts` | on | a signed-in member sends mail |
+
+   After a deploy, confirm the reported version on `mcp` and `seal-receipt`
+   and that a bare `GET` to `walkthrough-image` answers 400 from the
+   function, not 401 from the gateway.
 5. **Frontend.** Push the tree. The site is served from the repository, so
    there is no build step and what is committed is what runs.
 6. **Smoke test.** Open the app, create a record, generate a baseline, and
@@ -48,6 +63,7 @@ One row per release, oldest first.
 | the release before | 3.0.0 | SQL: none. Functions: no. Push, delete the paths in STALE_PATHS.md, and hard refresh. |
 | the release before | 3.0.1 | SQL: none. Functions: yes, all eight, so the pinned import takes effect. Push and hard refresh. |
 | the release before | 3.1.0 | SQL: migrations/0030_record_conformance.sql, before the push. Functions: yes, seal-receipt and mcp. Push and hard refresh. |
+| the release before | 3.2.0 | SQL: migrations/0031_handoff_and_export.sql, before the push. Functions: yes, all eight, each with the JWT setting its header states. Push and hard refresh. |
 
 Which migrations are already applied to the production deployment is recorded
 in [MIGRATIONS.md](MIGRATIONS.md), not here. Deployment state is not

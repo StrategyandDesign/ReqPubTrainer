@@ -5,7 +5,7 @@
 
 import { esc, escA, ico, IC, brandmark, initials, relTime, themeGet, APP_VERSION } from './core.js';
 import { helpBeaconHTML, helpPanelHTML, helpSpotHTML, helpStudioHTML } from './help.js';
-import { Q, SECTIONS, qBySec, visQL, lensHasSec, PHASES, currentPhase, isAnswered, assembleAnswers, buildSections, assemble, mdToHtml, reqDiff, reqDiffDetail, BRIEF_SECTIONS, docSecNum, docSecTitle, isPursuit, pursuitSection } from './domain.js';
+import { Q, SECTIONS, qBySec, visQL, lensHasSec, PHASES, currentPhase, isAnswered, assembleAnswers, buildSections, assemble, mdToHtml, reqDiff, reqDiffDetail, BRIEF_SECTIONS, docSecNum, docSecTitle, isPursuit, pursuitSection, ROW_PREFIX, ALL_GROUPS } from './domain.js';
 import { healthSignals, healthPillLabel } from './health.js';
 import { intakeKind, routeUnplaced } from './intake.js';
 import { renderTab, newReplyCount } from './views-collab.js';
@@ -643,12 +643,12 @@ export function fieldHTML(APP, q, a, editingBy) {
             '<select class="input" data-rowfield="' + escA(q.id) + '" data-rowid="' + escA(r.id) + '" data-colkey="' + escA(c.k) + '" style="height:36px;padding:0 8px">' +
             '<option value="">Unassigned</option>' + comps.map((o) => '<option' + (val === o ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select></div>';
         }
-        const wide = c.k === 'stmt' || c.k === 'fit' || c.k === 'desc' || c.k === 'obj' || c.k === 'needs' || c.k === 'req' || c.k === 'metric';
+        const wide = ['stmt', 'fit', 'desc', 'obj', 'needs', 'req', 'metric', 'problem', 'finding', 'constraint', 'scope', 'input', 'expected', 'notes', 'rationale', 'options'].includes(c.k);
         return '<div' + (wide ? ' style="grid-column:1/-1"' : '') + '><div style="font-size:10.5px;color:var(--ink-4);font-weight:560;margin-bottom:3px">' + esc(c.l) + '</div>' +
           '<textarea class="input gta" rows="1" data-rowfield="' + escA(q.id) + '" data-rowid="' + escA(r.id) + '" data-colkey="' + escA(c.k) + '" placeholder="' + escA(c.ph || '') + '">' + esc(val) + '</textarea></div>';
       }).join('');
-      const idtag = (q.id === 'fr' || q.id === 'nfr' || q.id === 'eval' || q.id === 'interfaces')
-        ? '<span class="mono" style="font-size:10.5px;color:var(--brand);font-weight:620">' + esc((q.id === 'fr' ? 'FR' : q.id === 'nfr' ? 'NFR' : q.id === 'eval' ? 'EVAL' : 'IR') + '-' + String(r.k).padStart(3, '0')) + '</span>'
+      const idtag = ROW_PREFIX[q.id]
+        ? '<span class="mono" style="font-size:10.5px;color:var(--brand);font-weight:620">' + esc(ROW_PREFIX[q.id] + '-' + String(r.k).padStart(3, '0')) + '</span>'
         // The Update Log's permanent phase-prefixed ID, stamped at creation
         // from the phase then current and never recomputed: deleting a row
         // cannot renumber the others and a number is never reused.
@@ -1013,8 +1013,8 @@ function renderChanges(APP, a) {
       '<div style="display:flex;align-items:center;gap:10px"><span class="mono" style="font-size:11px;color:var(--ink-4);width:16px">' + (s.num == null ? '·' : s.num) + '</span><span style="font-size:14px;color:' + (strong ? 'var(--ink)' : 'var(--ink-3)') + '">' + esc(s.title) + '</span></div>' +
       '<span class="pill' + (strong ? ' pill-solid' : '') + '">' + st + '</span></div>';
   }).join('');
-  const rd = reqDiff((prev && prev.snapshot && prev.snapshot.answers) || {}, (cur.snapshot && cur.snapshot.answers) || {});
-  const detail = reqDiffDetail((prev && prev.snapshot && prev.snapshot.answers) || {}, (cur.snapshot && cur.snapshot.answers) || {});
+  const rd = reqDiff((prev && prev.snapshot && prev.snapshot.answers) || {}, (cur.snapshot && cur.snapshot.answers) || {}, ALL_GROUPS);
+  const detail = reqDiffDetail((prev && prev.snapshot && prev.snapshot.answers) || {}, (cur.snapshot && cur.snapshot.answers) || {}, ALL_GROUPS);
   const chip = (label, ids, solid) => ids.length ? '<div style="margin-bottom:10px"><span class="eyebrow" style="font-size:9.5px">' + label + '</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">' + ids.map((id) => '<span class="pill' + (solid ? ' pill-solid' : '') + '"><span class="mono">' + esc(id) + '</span></span>').join('') + '</div></div>' : '';
   // "FR-014 modified" is a changelog; the exact before and after is evidence.
   const clip = (t) => { const x = String(t || '').trim(); return x.length > 140 ? x.slice(0, 139) + '…' : (x || '(empty)'); };

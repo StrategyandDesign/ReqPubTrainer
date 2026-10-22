@@ -47,6 +47,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0023_webhooks.sql')));
   await run(sql(rel('../../supabase/migrations/0023_webhooks.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   check('migrations/0023_webhooks.sql applies twice on the full prior stack', true);
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@cv.co'),('${MEMBER}','viewer@cv.co'),('${OUTSIDER}','x@rival.co')`);

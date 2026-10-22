@@ -157,6 +157,18 @@ export const HELP_LIBRARY = [
     steps: [],
   },
   {
+    title: 'The discovery record: clearance, ranking, findings, constraints',
+    routes: ['workspace'], audience: 'all', sort_order: 235,
+    body_md: 'Five tables carry what the sessions and the floor established, and they travel in the baseline like every other row.\n\n**Clearance.** Each approval of environment, data and access, with the name of the person who gave it. A refusal is recorded too.\n\n**Ranked problems.** Each candidate with the commercial quantity it moves, the priced gap between the claimed process and the floor, and its rank. The executive signs the baseline that holds it.\n\n**Findings.** What observation showed against what was claimed: the failed claim stays, the contradicting source sits beside it.\n\n**Control function constraints.** A limit with a fit criterion is a test the suite carries, authored by its control function.\n\n**Release reviews.** Each build run against the suite: the build reference, the baseline fingerprint it read, the result, who accepted it. An agent may propose one through the Inbox; a person promotes it.\n\nClaims themselves live in the discovery entries, promote into requirements, and leave in the evidence pack as written. Every id here is permanent: CLR, RANK, FND, CON, REL.',
+    steps: [],
+  },
+  {
+    title: 'Hand off to engineering: package, knowledge map, drift gate',
+    routes: ['workspace'], audience: 'all', sort_order: 236,
+    body_md: 'One click on an approved baseline produces the implementation package, each file carrying the fingerprint: requirements.json with every id, pass condition, test input and expected result; acceptance.md as a checklist; CHANGES.md per column; prd.md; and a knowledge folder, the same baseline as an Open Knowledge Format bundle a Documenter agent folds into the repository map.\n\nAgents read the same baseline over MCP and check its fingerprint before claiming conformance. The pod commits requirements.json and runs tools/spec-drift-gate.mjs in its pipeline: the build fails when the committed copy drifts from the signed baseline.\n\nTurn on signed handoff on the Access page and both routes refuse a baseline no client has signed and sealed.',
+    steps: [],
+  },
+  {
     title: 'Scope it so it can be signed',
     routes: ['workspace'], audience: 'all', sort_order: 240,
     body_md: 'A document gets signed when the reader can see its edges.\n\nIn scope and Out of scope are the edges: short, concrete, and honest. An empty Out of scope tells a client you have not thought about what you are declining, and they will assume everything.\n\nUnknowns are not failures, they are open items: write to confirm in place, and the Health tab counts them so nothing silently hardens into a promise. Decisions record what was chosen and why, so the argument never has to happen twice.\n\n**Do next.** Add one honest line to Out of scope. It is the cheapest trust you will build today.',

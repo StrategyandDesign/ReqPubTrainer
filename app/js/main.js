@@ -3,7 +3,7 @@
    Views are pure string builders; this file owns every state change.
    ============================================================================ */
 
-import { esc, ico, IC, uid, themeInit, themeSet, copyText, debounce, presentUrl, pushUnique, upsertById, isDupKey, versionFingerprint, download } from './core.js';
+import { esc, ico, IC, uid, themeInit, themeSet, copyText, debounce, presentUrl, pushUnique, upsertById, isDupKey, versionFingerprint, download, APP_VERSION } from './core.js';
 import { assembleAnswers, buildSections, suggestFit, changeNote, qById, mdToHtml, defaultBriefSections, PHASES, PHASE_LETTER, currentPhase, phaseLetter, rowsFilled, tagDoneCandidates, ENGAGEMENT, priorSigners } from './domain.js';
 import { sb, online, repo, buildSharePayload, sb as sbClient } from './data.js';
 import { sync } from './sync.js';
@@ -23,6 +23,11 @@ import { buildEvidencePack, csvCell } from './evidencepack.js';
 import { buildRecordOfDelivery, buildClosePackage } from './recordofdelivery.js';
 import { buildInvoicePacket } from './invoicepacket.js';
 const keyById = (rows) => { const o = {}; (rows || []).forEach((r) => { o[r.sign_request_id] = r; }); return o; };
+/* v3.2 Signed handoff. The control is an authored project field like the
+   propose gate; sealed means a signed, unrevoked request on the version
+   holds an acceptance receipt. Computed from rows the app already holds. */
+const signedHandoffOn = () => !!(APP.fields && APP.fields.ctrl_signed_handoff && APP.fields.ctrl_signed_handoff.value === 'on');
+const versionSealed = (versionId) => ((APP.signs || {})[versionId] || []).some((s) => s && s.status === 'signed' && !s.revoked && (APP.receipts || {})[s.id]);
 import { templateByKey, applyTemplate, applyAnswerSet, buildTemplatePayload } from './templates.js';
 
 /* ---------------- state ---------------- */
@@ -1375,11 +1380,18 @@ async function handleAction(a, id, t, e) {
       if (prevMeta) await ensureSnapshot(prevMeta.seq);
       const prevSnap = prevMeta ? APP.snapshots[prevMeta.seq] : null;
       const v = APP.versions[idx];
+      // v3.2 A project that hands off only from a sealed baseline refuses the
+      // package for a version no client has signed and sealed. The same rule
+      // holds server side in mcp_get_baseline, so neither route can disagree.
+      if (v && signedHandoffOn() && !versionSealed(v.id)) {
+        toast('This project hands off only from a sealed baseline. v' + snap.label + ' carries no sealed acceptance receipt yet.');
+        break;
+      }
       const fingerprint = await versionFingerprint(snap);
       const ap = v ? (APP.approvals[v.id] || []) : [];
       const answers = snap.snapshot.answers || {};
       const product = answers.ctrl_product || (APP.project && APP.project.name) || 'Untitled';
-      const files = buildImplementationFiles({
+      const files = buildImplementationFiles({ appVersion: APP_VERSION,
         product, label: snap.label, seq, status: v ? v.status : snap.status, gate: snap.snapshot.gate || undefined,
         note: (v && v.note) || snap.note || '', author: (v && v.author_name) || snap.author_name || '',
         baselined: (v && v.created_at) || snap.created_at || '',
@@ -1610,6 +1622,15 @@ async function handleAction(a, id, t, e) {
       if (!(r.data && r.data.ok)) { toast('Could not change the setting: ' + ((r.data && r.data.error) || 'request failed')); break; }
       APP.fields.ctrl_mcp_propose = { value: next, rev: (r.data.rev || ((cur ? cur.rev : 0) + 1)) };
       render(); toast(next === 'on' ? 'Agent proposals are on for this project.' : 'Agent proposals are off for this project.');
+      break;
+    }
+    case 'signedhandofftoggle': {
+      const cur = APP.fields && APP.fields.ctrl_signed_handoff;
+      const next = cur && cur.value === 'on' ? 'off' : 'on';
+      const r = await repo.saveField(APP.pid, 'ctrl_signed_handoff', next, cur ? cur.rev : 0);
+      if (!(r.data && r.data.ok)) { toast('Could not change the setting: ' + ((r.data && r.data.error) || 'request failed')); break; }
+      APP.fields.ctrl_signed_handoff = { value: next, rev: (r.data.rev || ((cur ? cur.rev : 0) + 1)) };
+      render(); toast(next === 'on' ? 'Handoff is now only from a sealed baseline, here and over MCP.' : 'Handoff from any approved baseline is allowed again.');
       break;
     }
     case 'mcpcheck': {

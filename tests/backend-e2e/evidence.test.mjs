@@ -32,6 +32,7 @@ const RORG = '22222222-0000-0000-0000-0000000000e5';
 const VID = 'aaaaaaaa-0000-0000-0000-0000000000e6';
 const SREQ = 'bbbbbbbb-0000-0000-0000-0000000000e1';
 const RCPT = 'cccccccc-0000-0000-0000-0000000000e1';
+const CID = '0ff1ce00-0000-4000-8000-00000000c1d0';
 
 try {
   await run(sql(rel('shim.sql')));
@@ -46,6 +47,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0025_evidence.sql')));
   await run(sql(rel('../../supabase/migrations/0025_evidence.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   check('migrations/0025_evidence.sql applies twice on the full prior stack', true);
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@cv.co'),('${MEMBER}','viewer@cv.co'),('${OUTSIDER}','x@rival.co')`);
@@ -65,6 +67,14 @@ try {
   await run(`insert into attachments(org_id,project_id,uploader_kind,file_name,mime,size_bytes,storage_path,sha256_hex) values
     ('${ORG}','pev','team','sow.pdf','application/pdf',2048,'p/ev/sow.pdf',repeat('11',32))`);
   await run(`select log_activity('${ORG}','pev','comm.received','comm','c-x','A note arrived','{"secret":"METASECRET77"}'::jsonb)`);
+  // v3.2: the whole record exports. A discovery entry and an Inbox entry with
+  // its thread, seeded with the two things that must never leave: an author
+  // address and a reply token.
+  await run(`insert into discovery_entries(org_id,project_id,takeaway,heard,decided,open_questions,who,source,author_name,promoted_to) values
+    ('${ORG}','pev','Quotes are retyped','The desk retypes every quote from the CRM','Observe the desk','Which fields?','A. Gomez','Session 2','Micah','FR-004')`);
+  await run(`insert into comms(id,org_id,project_id,origin,author_name,author_email,title,body,status,promoted_to,reply_token) values
+    ('${CID}','${ORG}','pev','sme','Priya Nair','priya@clientco.example','Pricing rule','When a quote exceeds 10k the desk calls finance','actioned','FR-004','REPLYTOKSECRET9876')`);
+  await run(`insert into messages(org_id,parent_kind,parent_id,author_kind,author_name,body) values ('${ORG}','comm','${CID}','team','Micah','Confirmed with finance')`);
 
   /* ---- the one throat: manager gather, leak grep on the full payload ---- */
   await run(`set role authenticated`); await asUser(MGR);
@@ -83,6 +93,13 @@ try {
   check('signature facts pair the sealed request with its receipt',
     g.j.signatures[0].receiptId === RCPT && g.j.signatures[0].signerName === 'Kate Q Client' && g.j.signatures[0].signerEmailDomain === 'clientco.example');
   check('the chain result rides in the gather', g.j.chain && g.j.chain.ok === true);
+  check('v3.2: the discovery entries ride in the gather as written, with source, author and what they became',
+    g.j.discovery.length === 1 && g.j.discovery[0].heard === 'The desk retypes every quote from the CRM' && g.j.discovery[0].source === 'Session 2'
+      && g.j.discovery[0].authorName === 'Micah' && g.j.discovery[0].promotedTo === 'FR-004', g.j.discovery);
+  check('v3.2: the conversations ride with their threads, and neither the author address nor the reply token leaves',
+    g.j.conversations.length === 1 && g.j.conversations[0].title === 'Pricing rule' && g.j.conversations[0].origin === 'sme'
+      && g.j.conversations[0].messages.length === 1 && g.j.conversations[0].messages[0].body === 'Confirmed with finance'
+      && !blob.includes('REPLYTOKSECRET') && !blob.includes('priya@clientco.example'), g.j.conversations);
 
   /* ---- gating: member and rival alike ---- */
   await asUser(MEMBER);

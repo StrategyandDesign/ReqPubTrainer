@@ -53,7 +53,9 @@ const README = (p) => [
   'are RFC 3161 timestamps, read and checked by the tool (status, imprint,',
   'signature); the printed openssl commands chain them to a root. Trail',
   'sequence: chain-verification.json is the project chain result, recomputed',
-  'per VERIFY.md section 8.',
+  'per VERIFY.md section 8. The whole record: discovery.json holds every',
+  'discovery entry (heard, decided, open, with its source) and',
+  'conversations.json every Inbox entry with its thread, as written.',
   '',
   'WHAT THIS PACK DOES NOT DO',
   'No computed status. No summary judgment. No claim outside the record.',
@@ -103,6 +105,8 @@ function coverHtml(p, counts) {
     row('Signatures', counts.signatures) +
     row('Sealed receipts', counts.receipts) +
     row('Attachments', counts.attachments) +
+    row('Discovery entries', counts.discovery) +
+    row('Conversations', counts.conversations) +
     row('Chain', counts.chain) +
     '</table>' +
     '<p class="note">This pack proves content integrity per fingerprint, seal authenticity per Ed25519, ' +
@@ -128,6 +132,8 @@ export async function buildEvidencePack(gather, opts = {}) {
   const receipts = Array.isArray(g.receipts) ? g.receipts : [];
   const attachments = Array.isArray(g.attachments) ? g.attachments : [];
   const keys = Array.isArray(g.keys) ? g.keys : [];
+  const discovery = Array.isArray(g.discovery) ? g.discovery : [];
+  const conversations = Array.isArray(g.conversations) ? g.conversations : [];
   const chain = g.chain || {};
 
   files.push({ name: 'README.txt', data: README(p) });
@@ -165,6 +171,19 @@ export async function buildEvidencePack(gather, opts = {}) {
     result: chain,
   }, null, 2) + '\n' });
 
+  /* v3.2 The whole record leaves with the client: the discovery entries and
+     the conversations, as written, under the same leak rules. Both files
+     are present even when empty, so the layout is fixed and the manifest
+     strict both ways still holds. */
+  files.push({ name: 'discovery.json', data: JSON.stringify({
+    note: 'Discovery entries as written: what was heard, what was decided, what stayed open, with their sources and authors. Nothing computed.',
+    entries: discovery,
+  }, null, 2) + '\n' });
+  files.push({ name: 'conversations.json', data: JSON.stringify({
+    note: 'Every Inbox entry with its thread, as written: origin, author name, status, what it was promoted to. No email address, no token.',
+    entries: conversations,
+  }, null, 2) + '\n' });
+
   for (const v of versions) {
     files.push({ name: 'versions/baseline-' + v.seq + '.reqpub.json',
       data: await buildVerifyBundle({ label: v.label, seq: v.seq, snapshot: v.snapshot }, { product }) });
@@ -187,6 +206,7 @@ export async function buildEvidencePack(gather, opts = {}) {
   files.push({ name: 'cover.html', data: coverHtml(p, {
     versions: versions.length, signatures: signatures.length,
     receipts: receipts.length, attachments: attachments.length,
+    discovery: discovery.length, conversations: conversations.length,
     chain: chain.ok === true
       ? 'ok, head seq ' + chain.head_seq
       : (chain.ok === false ? 'divergence at seq ' + chain.divergence_seq : 'not computed'),

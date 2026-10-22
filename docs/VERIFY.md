@@ -312,6 +312,11 @@ who signed, provable, offline. Layout:
                                      scan_status, created_at
     chain-verification.json          verify_project_chain output verbatim,
                                      recompute per section 8
+    discovery.json                   every discovery entry as written (v3.2):
+                                     heard, decided, open, source, author
+    conversations.json               every Inbox entry with its thread as
+                                     written (v3.2): origin, author name,
+                                     status, promoted to; no address, no token
     VERIFY-excerpt.txt               the working excerpt of this document
     versions/baseline-<seq>.reqpub.json   one bundle per baseline, section 2
     receipts/<hash8>/...             one folder per sealed receipt, exactly

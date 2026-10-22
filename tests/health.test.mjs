@@ -26,6 +26,23 @@ test('a clean record raises no signals', () => {
   assert.deepEqual(healthSignals(clean, {}), []);
 });
 
+test('v3.2 mechanical review: a non negotiable constraint without a fit, a thin ranked problem, and a testable constraint outside EARS each warn', () => {
+  const a = { ...clean,
+    controls: [{ _k: 1, constraint: 'Only masked data in the sandbox', owner: 'Privacy', fit: '', negotiable: 'No' },
+               { _k: 2, constraint: 'Quotes leave through the ERP only', owner: 'Security', fit: 'No quote file outside the ERP. Inspection.', negotiable: 'No' },
+               { _k: 3, constraint: 'When a quote leaves the system, the system shall write it to the ERP.', owner: 'Security', fit: 'Inspection.', negotiable: 'No' },
+               { _k: 4, constraint: 'Nice to have', owner: 'Ops', fit: '', negotiable: 'Yes' }],
+    ranking: [{ _k: 1, problem: 'Quote desk', mechanism: 'hours to quote', gap: '', rank: '1', status: 'Taken forward' },
+              { _k: 2, problem: 'Invoices', mechanism: '', gap: '', rank: '2', status: 'Candidate' }] };
+  const sig = healthSignals(a, {});
+  assert.equal(get(sig, 'con_no_fit').count, 1, 'only the non negotiable one without a fit');
+  assert.equal(get(sig, 'con_no_fit').level, 'warn');
+  assert.equal(get(sig, 'con_not_ears').count, 1, 'the testable constraint in free text, not the EARS one');
+  assert.equal(get(sig, 'rank_no_mechanism').count, 1, 'a candidate is not judged; a problem taken forward is');
+  assert.equal(get(healthSignals(clean, {}), 'con_no_fit'), undefined, 'a record without the discovery record raises nothing');
+  assert.equal(get(healthSignals(clean, {}), 'rank_no_mechanism'), undefined);
+});
+
 test('a requirement outside the EARS shapes is a warning, counted across FR and NFR, and never a gap', () => {
   const a = { ...clean,
     fr: [...clean.fr, { _k: 2, stmt: 'Handles errors gracefully', fit: 'ok', pri: 'Must', comp: 'Core' }],

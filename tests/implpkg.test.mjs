@@ -40,8 +40,14 @@ const meta = {
 const files = buildImplementationFiles(meta);
 const byName = Object.fromEntries(files.map((f) => [f.name, f.text]));
 
-test('the package is exactly five files, all named for their job', () => {
-  assert.deepEqual(files.map((f) => f.name), ['requirements.json', 'acceptance.md', 'CHANGES.md', 'prd.md', 'README.md']);
+test('the package is five named files plus the knowledge map, index and log first and last', () => {
+  assert.deepEqual(files.slice(0, 5).map((f) => f.name), ['requirements.json', 'acceptance.md', 'CHANGES.md', 'prd.md', 'README.md']);
+  const km = files.slice(5).map((f) => f.name);
+  assert.equal(km[0], 'knowledge/index.md');
+  assert.equal(km[km.length - 1], 'knowledge/log.md');
+  assert.ok(km.includes('knowledge/requirements/FR-001.md'));
+  assert.ok(km.includes('knowledge/evaluation/EVAL-004.md'));
+  assert.ok(km.includes('knowledge/interfaces/IR-001.md'));
 });
 
 test('requirements.json carries ids, fit, priority, source, and the attested recorder', () => {
@@ -180,6 +186,101 @@ test('approvals ride as labeled record-state, never as baseline content', () => 
 test('the package is deterministic for a given baseline', () => {
   const again = buildImplementationFiles(meta);
   assert.deepEqual(again, files);
+});
+
+/* ---- v3.2 ---- */
+const disc = { ...answers,
+  fr: [{ _k: 1, stmt: 'When a quote is requested, the system shall draft it within one hour.', fit: 'Drafted within 60 minutes on the acceptance set. Test.', input: 'Request #4471 from the acceptance set', expected: 'A draft quote in the queue within 60 minutes', pri: 'Must', exec: 'Agent', _author: 'Jane Roe', _origin: 'sme' }],
+  eval: [{ _k: 2, dim: 'Price accuracy', metric: 'Exact match to the price book', thresh: 'at least 98%', dataset: 'quote-set v2 · 200 cases', grader: 'Pricing desk lead, rubric R1', pass_rate: '19 of 20 runs' }],
+  metrics: [{ _k: 1, metric: 'Hours from request to quote', target: 'under 4', method: 'Desk log, weekly', baseline: '11.2 hours on 40 requests, week of observation', comparison: 'Matched desk without the system, same period' }],
+  clearance: [{ _k: 1, item: 'Quote data, masked', scope: 'Read only, 2025 and 2026', approver: 'R. Patel, Security', date: '2026-10', status: 'Approved' }],
+  ranking: [{ _k: 1, problem: 'Quote desk turnaround', mechanism: 'hours from request to quote', gap: '11 hours per quote across 40 a week', rank: '1', status: 'Taken forward' }, { _k: 2, problem: 'Invoice disputes', mechanism: 'days to cash', gap: 'to price', rank: '2', status: 'Candidate' }],
+  findings: [{ _k: 1, finding: 'Quotes are retyped from the CRM into the pricing sheet', contradicts: 'Session 2 claim that pricing reads the CRM', source: 'A. Gomez, observed 14 Oct', owner: 'Business owner', kind: 'Failed claim' }],
+  controls: [{ _k: 1, constraint: 'When a quote leaves the system, the system shall write it to the ERP and nowhere else.', owner: 'Security, R. Patel', fit: 'No quote file exists outside the ERP after export. Inspection.', negotiable: 'No' }, { _k: 2, constraint: 'Only masked data in the sandbox', owner: 'Privacy', fit: '', negotiable: 'No' }],
+  returns: [{ _k: 1, build: 'a1b2c3d', fingerprint: 'a'.repeat(64), result: 'Pass', notes: '', accepted: 'M. Chen', date: '2026-11' }],
+  decisions: [{ _k: 3, decision: 'Quotes under 500 need no review', ref: 'FR-001', kind: 'Reconcile', options: 'All reviewed; none reviewed', rationale: 'Operators showed review adds nothing under 500', owner: 'Business owner', date: '2026-10', supersedes: '' }],
+  glossary: [{ _k: 1, term: 'Quote desk', def: 'The three people who price inbound requests' }]
+};
+const dfiles = buildImplementationFiles({ ...meta, answers: disc, prevAnswers: null, prevLabel: '' });
+const dby = Object.fromEntries(dfiles.map((f) => [f.name, f.text]));
+
+test('requirements.json carries test inputs, expected results, graders and pass rates', () => {
+  const j = JSON.parse(dby['requirements.json']);
+  assert.equal(j.requirements.fr[0].testInput, 'Request #4471 from the acceptance set');
+  assert.equal(j.requirements.fr[0].expectedResult, 'A draft quote in the queue within 60 minutes');
+  assert.equal(j.requirements.eval[0].grader, 'Pricing desk lead, rubric R1');
+  assert.equal(j.acceptance[0].passRate, '19 of 20 runs');
+  assert.equal(j.acceptance[0].dataset, 'quote-set v2 · 200 cases');
+});
+
+test('requirements.json carries the discovery record, the decisions, the commercial thresholds and the glossary', () => {
+  const j = JSON.parse(dby['requirements.json']);
+  assert.deepEqual(j.discovery.ranking.map((r) => r.id), ['RANK-001', 'RANK-002']);
+  assert.equal(j.discovery.ranking[0].pricedGap, '11 hours per quote across 40 a week');
+  assert.equal(j.discovery.clearance[0].approvedBy, 'R. Patel, Security');
+  assert.equal(j.discovery.findings[0].kind, 'Failed claim');
+  assert.equal(j.discovery.constraints[1].negotiable, 'No');
+  assert.equal(j.discovery.releaseReviews[0].baselineFingerprint, 'a'.repeat(64));
+  assert.equal(j.decisions[0].id, 'DEC-003');
+  assert.equal(j.decisions[0].concerns, 'FR-001');
+  assert.equal(j.thresholds[0].comparisonMethod, 'Matched desk without the system, same period');
+  assert.equal(j.glossary[0].term, 'Quote desk');
+  const plain = JSON.parse(byName['requirements.json']);
+  assert.equal(plain.discovery, undefined, 'a record without discovery rows carries no discovery block');
+  assert.equal(plain.decisions, undefined);
+});
+
+test('acceptance.md lists inputs and expected results, the commercial thresholds, and testable constraints as boxes', () => {
+  const md = dby['acceptance.md'];
+  assert.ok(md.includes('Input: Request #4471'));
+  assert.ok(md.includes('Expected: A draft quote'));
+  assert.ok(md.includes('## Commercial thresholds'));
+  assert.ok(md.includes('11.2 hours on 40 requests'));
+  assert.ok(md.includes('| Grader | Pass rate |'));
+  assert.ok(md.includes('- [ ] **CON-001**'), 'a constraint with a fit criterion is a test');
+  assert.ok(!md.includes('CON-002'), 'a constraint without a fit criterion is not a box');
+});
+
+test('CHANGES.md names changes on every id-bearing table, by permanent id and column', () => {
+  const next = { ...disc, ranking: [{ ...disc.ranking[0], status: 'Taken forward' }, { ...disc.ranking[1], rank: '3' }], findings: [...disc.findings, { _k: 2, finding: 'New', source: 'x' }], controls: [disc.controls[0]] };
+  const f2 = buildImplementationFiles({ ...meta, answers: next, prevAnswers: disc, prevLabel: '1.0', label: '2.0' });
+  const md = f2.find((f) => f.name === 'CHANGES.md').text;
+  assert.ok(md.includes('- **FND-002** New'));
+  assert.ok(md.includes('**RANK-002**'));
+  assert.ok(md.includes('- rank: ~~2~~ → 3'));
+  assert.ok(md.includes('- CON-002'), 'a removed constraint is listed');
+  const first = dby['CHANGES.md'];
+  assert.ok(first.includes('7 discovery record rows'));
+  assert.ok(first.includes('1 decisions'));
+});
+
+test('the knowledge map is an OKF 0.2 bundle: typed frontmatter on every concept, an index of links, a dated log', () => {
+  const idx = dby['knowledge/index.md'];
+  assert.ok(idx.startsWith('---\nokf_version: "0.2"\n---'));
+  assert.ok(idx.includes('## Ranked problems'));
+  assert.ok(idx.includes('- [RANK-001](/discovery/ranking/RANK-001): Quote desk turnaround'));
+  assert.ok(idx.includes('- [Quote desk](/glossary/quote-desk): The three people'));
+  const fr = dby['knowledge/requirements/FR-001.md'];
+  assert.ok(fr.startsWith('---\ntype: requirement\n'));
+  assert.ok(fr.includes('  fingerprint: ' + 'a'.repeat(64)));
+  assert.ok(fr.includes('  author: Jane Roe'));
+  assert.ok(fr.includes('  origin: sme'));
+  assert.ok(fr.includes('**Test input.** Request #4471'));
+  const log = dby['knowledge/log.md'];
+  assert.ok(/^## \d{4}-\d{2}-\d{2}$/m.test(log), 'ISO date headings');
+  assert.ok(log.indexOf('v2.0') < log.indexOf('v1.0'), 'newest first');
+  for (const f of dfiles) {
+    if (!f.name.startsWith('knowledge/') || f.name === 'knowledge/index.md' || f.name === 'knowledge/log.md') continue;
+    assert.ok(/^---\ntype: [a-z-]+\n/.test(f.text), f.name + ' opens with typed frontmatter');
+    assert.ok(/\n---\n\n# /.test(f.text), f.name + ' closes its frontmatter before the title');
+  }
+  assert.ok(!dfiles.some((f) => /\.md$/.test(f.name) && /\/(index|log)\.md$/.test(f.name) && !/^knowledge\/(index|log)\.md$/.test(f.name)), 'reserved names appear only at the bundle root');
+});
+
+test('the knowledge map is deterministic and carries the fingerprint on every file', () => {
+  const again = buildImplementationFiles({ ...meta, answers: disc, prevAnswers: null, prevLabel: '' });
+  assert.deepEqual(again, dfiles);
+  for (const f of dfiles) assert.ok(f.text.includes('a'.repeat(64)), f.name);
 });
 
 console.log('\nimplpkg.test: ' + n + '/' + n + ' passed');

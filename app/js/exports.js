@@ -2,7 +2,7 @@
 
 import { esc, escA, download, copyText, fmtFingerprint } from './core.js';
 import { healthStateLine } from './health.js';
-import { mdToHtml, execSummaryData, bBrief, defaultBriefSections, revisionBody, mdTable, reqDiff, reqDiffDetail } from './domain.js';
+import { mdToHtml, execSummaryData, bBrief, defaultBriefSections, revisionBody, mdTable, reqDiff, reqDiffDetail, ALL_GROUPS } from './domain.js';
 
 const STATUS_LABEL = { draft: 'Draft', in_review: 'In review', approved: 'Approved', changes_requested: 'Changes requested' };
 const ok = (u) => typeof u === 'string' && /^data:image\/(png|jpe?g|gif|webp|svg\+xml);/i.test(u);
@@ -51,8 +51,11 @@ export function coverHTML(meta) {
     '<section class="rp-cover">' +
     '<div class="rp-cover-top">' +
       '<div class="rp-lockup">' + (logo || '<div class="rp-nologo"></div>') + label + '</div>' +
-      '<div class="rp-by"><span class="rp-by-t">Published with</span>' +
-        '<span class="rp-by-brand"><span class="rp-mk"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>ReqPub</span></div>' +
+      // v3.2 White label: a record the practice brands carries the practice's
+      // name on the cover and no ReqPub mark. The verifier line on exports
+      // keeps the tool's name, because a verifier has to know what to run.
+      (meta.brandLabel ? '' : '<div class="rp-by"><span class="rp-by-t">Published with</span>' +
+        '<span class="rp-by-brand"><span class="rp-mk"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>ReqPub</span></div>') +
     '</div>' +
     '<div class="rp-cover-mid">' +
       '<div class="rp-eyebrow">' + esc(meta.eyebrow || 'Requirements Baseline') + '</div>' +
@@ -105,7 +108,7 @@ export function downloadWord(md, meta) {
     '<div style="font-family:Consolas,monospace;font-size:8.5pt;letter-spacing:1.5pt;text-transform:uppercase;color:#2563FF;margin-top:10pt">Requirements Baseline</div>' +
     '<div class="rp-title">' + esc(meta.product || 'Untitled') + '</div>' +
     '<div class="rp-meta">' + esc(rail) + '</div>' + approvals +
-    '<div style="font-size:8.5pt;color:#888;margin-top:8pt">Published with ReqPub</div></div>';
+    (meta.brandLabel ? '' : '<div style="font-size:8.5pt;color:#888;margin-top:8pt">Published with ReqPub</div>') + '</div>';
   const doc = '<!DOCTYPE html><html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8">' +
     '<title>' + esc(meta.product || 'Requirements') + '</title><style>' +
     'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#111;line-height:1.5;max-width:760px}' +
@@ -249,14 +252,14 @@ export function gatePacketMd(meta, curAnswers, prevAnswers, prevLabel) {
     P.push('## Criteria state at this baseline\n\n_Not computed for this print._');
   }
   if (prevAnswers) {
-    const rd = reqDiff(prevAnswers, curAnswers || {});
-    const det = reqDiffDetail(prevAnswers, curAnswers || {});
+    const rd = reqDiff(prevAnswers, curAnswers || {}, ALL_GROUPS);
+    const det = reqDiffDetail(prevAnswers, curAnswers || {}, ALL_GROUPS);
     const parts = ['## Changes since v' + prevLabel,
       rd.added.length + ' added · ' + rd.modified.length + ' modified · ' + rd.removed.length + ' removed, by permanent id.'];
     if (rd.added.length) parts.push('**Added.** ' + rd.added.join(', '));
     if (det.length) parts.push(det.map((d) => '**' + d.id + '**\n' + d.changes.map((c) => '- ' + c.label + ': ~~' + (c.from || '(empty)') + '~~ → ' + (c.to || '(empty)')).join('\n')).join('\n\n'));
     if (rd.removed.length) parts.push('**Removed.** ' + rd.removed.join(', '));
-    if (!rd.added.length && !det.length && !rd.removed.length) parts.push('No requirement-level changes since the prior baseline.');
+    if (!rd.added.length && !det.length && !rd.removed.length) parts.push('No row-level changes since the prior baseline.');
     P.push(parts.join('\n\n'));
   } else {
     P.push('## Changes\n\nInitial baseline. There is no prior gate to diff against.');

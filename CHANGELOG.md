@@ -1,5 +1,71 @@
 # Changelog
 
+## 3.2.0
+
+The engineering seam release. Two engineering papers describe the pod that
+builds from this record: the specification is the source of truth, the test
+suite is the agent's instruction set, a person stays accountable for intent.
+Twenty four demands follow from them; twelve were met, nine in part, three
+not at all. This release closes the seam in both directions and leaves the
+three rules untouched: no model call, a person approves everything that
+enters, nothing computed under the fingerprint.
+
+**The discovery record is signed content.** Five tables, under one unnumbered
+heading in both document shapes: Clearance (CLR), Ranked problems with
+mechanism and priced gap (RANK), Findings against claims (FND), Control
+function constraints with an optional fit criterion (CON), and Release
+reviews with the build reference and the baseline fingerprint it read (REL).
+Rows in the snapshot, permanent ids, signed with the baseline, printed,
+diffed, packaged. Success metrics gain a baseline measure and a comparison
+method, which is what a signed threshold is. Decisions gain Concerns (the
+row they decide) and Kind (Reconcile names where leadership and operators
+disagreed). An empty record prints byte for byte as before: a column no
+row fills stays out of the table.
+
+**Tests carry their cases.** Functional and non functional rows gain a test
+input and an expected result; evaluation rows gain a grader and a pass rate.
+All of it travels into requirements.json, the acceptance checklist and
+CHANGES.md, which now names changes on every id bearing table, per column.
+
+**Handoff only from a sealed baseline.** A project switch on the Access
+page, stored like the propose gate. With it on, the implementation package
+and reqpub_get_baseline refuse a version no client has signed and sealed.
+Every baseline answer now states sealed and sealedBy, and a refusal carries
+its sentence. tools/spec-drift-gate.mjs is the pod's pipeline step: it reads
+the signed baseline over MCP, compares its fingerprint with the committed
+requirements.json, and fails the build on drift.
+
+**The baseline as a knowledge bundle.** The implementation package carries a
+knowledge folder: the baseline as an Open Knowledge Format bundle (OKF 0.2),
+one typed concept file per row with YAML frontmatter, an index of links, a
+dated log, the fingerprint on every file. Deterministic for an unchanged
+baseline. A Documenter agent folds it into the repository map; a knowledge
+agent reads it by path.
+
+**The whole record exports.** evidence_gather gains the discovery entries
+and every Inbox entry with its thread, as written, under the same leak rules;
+discovery.json and conversations.json join the pack and the close package.
+
+**Unbranded to the client.** A record with a brand label carries the
+practice's name on the cover, the sign page, the presentation link and the
+record of delivery, and no ReqPub mark. The verifier line keeps the tool's
+name. The record of delivery now accepts the data URL logos the app stores
+and prints the objective the record holds.
+
+**Three more mechanical checks.** A non negotiable constraint with no fit
+criterion, a problem taken forward with no mechanism or priced gap, and a
+testable constraint outside EARS each raise a readiness warning.
+
+Migration 0031_handoff_and_export.sql, idempotent, with its ledger row;
+every backend suite that replays an older migration ends its stack with it.
+Two help topics, three capabilities, three folded.
+
+Deploy: apply `0031_handoff_and_export.sql` first, then push, then redeploy
+all eight edge functions from the repository, each with the JWT setting its
+header states. Six of them were found in production at a pre 3.0.1 build
+with the unpinned supabase-js import, and walkthrough-image was deployed
+with JWT verification on, which refused every share reader's image.
+
 ## 3.1.0
 
 The record conformance release. A discovery method paper described the

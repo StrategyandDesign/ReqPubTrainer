@@ -5,6 +5,7 @@ measured, and what was left open.
 
 | Version | Theme | Report |
 | --- | --- | --- |
+| 3.2 | The engineering seam release | [v3.2.md](v3.2.md) |
 | 3.1 | The record conformance release | [v3.1.md](v3.1.md) |
 | 2.57 | The Record of Delivery and the receiver templates | [v2.57.md](v2.57.md) |
 | 2.56 | Pursuit Mode and engagement lineage | [v2.56.md](v2.56.md) |

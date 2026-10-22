@@ -204,7 +204,11 @@ export async function handleRpc(msg, ctx) {
 
     if (!out || out.ok !== true) {
       await audit("denied");
-      const reason = out && typeof out.error === "string" ? out.error : "denied";
+      // v3.2 A refusal with a sentence behind it carries the sentence: a
+      // Planner told "unsealed" should also be told which baseline and why.
+      const reason = out && typeof out.error === "string"
+        ? out.error + (typeof out.message === "string" && out.message ? ": " + out.message : "")
+        : "denied";
       return { status: 200, body: rpcResult(msg.id, toolErr(reason)) };
     }
     return { status: 200, body: rpcResult(msg.id, toolJson(out)) };

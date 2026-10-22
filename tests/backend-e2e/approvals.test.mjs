@@ -39,6 +39,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0002_approver_assignment.sql')));
   await run(sql(rel('../../supabase/migrations/0001_approval_advance.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
 
   await run(`insert into auth.users(id,email) values
     ('${MGR}','mgr@collection.co'),('${APPR}','erik@collection.co'),('${RIVAL}','rival@other.co')`);

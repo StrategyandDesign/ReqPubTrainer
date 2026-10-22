@@ -1,7 +1,7 @@
 # Run report
 
 The report of the run that produced 3.0.0, kept as written. The current state
-of the tree is in `RUN_STATE.md`; the tree is at 3.1.0.
+of the tree is in `RUN_STATE.md`; the tree is at 3.2.0.
 
 Executed against the v3 specification. The tree is at 2.57.9 and green. The
 version bump to 3.0.0 has not happened; it is the last act of Workstream H and

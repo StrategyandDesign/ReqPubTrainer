@@ -124,6 +124,7 @@ unless it appears with a role below, and the suite fails on any drift.
 | `url_token(integer)` | no |  |  |
 | `v2_context()` | yes |  | yes |
 | `verify_project_chain(text)` | yes |  | yes |
+| `version_sealed(uuid)` | yes |  |  |
 | `version_set_build(uuid, text)` | yes |  | yes |
 | `version_set_status(uuid, text)` | yes |  | yes |
 | `walkthrough_add(text, uuid, text)` | yes |  | yes |
@@ -139,4 +140,4 @@ unless it appears with a role below, and the suite fails on any drift.
 | `webhook_on_seal()` | yes |  |  |
 | `webhook_on_sign()` | yes |  |  |
 
-Totals: 131 functions, 17 reachable by anon, 79 reachable by authenticated.
+Totals: 132 functions, 17 reachable by anon, 79 reachable by authenticated.

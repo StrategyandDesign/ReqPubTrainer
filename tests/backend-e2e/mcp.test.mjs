@@ -53,6 +53,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0024_mcp.sql')));
   await run(sql(rel('../../supabase/migrations/0024_mcp.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   check('migrations/0024_mcp.sql applies twice on the full prior stack', true);
 
   const conDef = await one(`select pg_get_constraintdef(oid) d from pg_constraint
@@ -184,6 +185,29 @@ try {
   check('get_baseline refuses a foreign project', blCross.j.ok === false && blCross.j.error === 'not_in_scope', blCross.j);
   const blScoped = await one(`select mcp_get_baseline('${ORG}', array['p2'], 'p1', null) j`);
   check('a scoped key cannot read a sibling project baseline', blScoped.j.ok === false && blScoped.j.error === 'not_in_scope', blScoped.j);
+
+  /* ---- v3.2 signed handoff: sealed facts on every answer, refusal under the control ---- */
+  check('get_baseline states that the sealed baseline is sealed, and by whom, with no token and no address',
+    bl.j.sealed === true && bl.j.signedHandoff === false && Array.isArray(bl.j.sealedBy) && bl.j.sealedBy[0].signerName === 'Ada Q Client'
+      && bl.j.sealedBy[0].receiptId === RCPT && !JSON.stringify(bl.j.sealedBy).includes('tok_secret') && !JSON.stringify(bl.j.sealedBy).includes('@'), bl.j.sealedBy);
+  check('get_baseline states that an unsealed baseline is not sealed', blSeq.j.sealed === false && blSeq.j.sealedBy.length === 0, blSeq.j);
+  await run(`set role authenticated`); await asUser(MGR);
+  const sh = await one(`select save_field('p1','ctrl_signed_handoff','"on"'::jsonb,0) j`);
+  check('the manager turns signed handoff on through save_field, like the propose gate', sh.j.ok === true, sh.j);
+  await run(`reset role`);
+  const blRef = await one(`select mcp_get_baseline('${ORG}', null, 'p1', 1) j`);
+  check('under signed handoff an unsealed baseline is refused as unsealed, naming the baseline',
+    blRef.j.ok === false && blRef.j.error === 'unsealed' && /v1\.0/.test(blRef.j.message) && blRef.j.snapshot === undefined, blRef.j);
+  const blOk = await one(`select mcp_get_baseline('${ORG}', null, 'p1', 2) j`);
+  check('under signed handoff the sealed baseline still answers, and says the control is on',
+    blOk.j.ok === true && blOk.j.sealed === true && blOk.j.signedHandoff === true && blOk.j.snapshot !== undefined, blOk.j);
+  await run(`set role authenticated`); await asUser(MGR);
+  await one(`select save_field('p1','ctrl_signed_handoff','"off"'::jsonb,1) j`);
+  await run(`reset role`);
+  const blBack = await one(`select mcp_get_baseline('${ORG}', null, 'p1', 1) j`);
+  check('turning the control off restores the handoff from any approved baseline', blBack.j.ok === true && blBack.j.signedHandoff === false, blBack.j);
+  const vsPriv = await one(`select has_function_privilege('authenticated', 'version_sealed(uuid)', 'execute') a, has_function_privilege('anon', 'version_sealed(uuid)', 'execute') b`);
+  check('version_sealed is reachable by neither anon nor authenticated', vsPriv.a === false && vsPriv.b === false, vsPriv);
 
   const ss = await one(`select mcp_signature_status('${ORG}', null, 'p1', 2) j`);
   const req0 = ss.j.requests && ss.j.requests[0];

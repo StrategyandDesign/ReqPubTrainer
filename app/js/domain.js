@@ -73,6 +73,11 @@ export const SECTIONS = [
   // platform computes nothing over them - no rollup, no verdict, no status.
   { key: 'okrs', num: null, title: 'Objectives and Key Results' },
   { key: 'updates', num: null, title: 'Risks and Issues' },
+  // v3.2 The discovery record, both document types, unnumbered like the two
+  // above so the fixed 1..17 never shifts: clearance, the ranking, findings,
+  // control function constraints, release reviews. Authored rows, in the
+  // snapshot, signed with the baseline, nothing computed over them.
+  { key: 'discovery', num: null, title: 'Discovery Record' },
   { key: 'data', num: 10, title: 'Data, Privacy, and Safeguarding', cond: reqOnly },
   { key: 'interfaces', num: 11, title: 'Interfaces and Integrations', cond: reqOnly },
   { key: 'verification', num: 12, title: 'Verification and Acceptance', cond: reqOnly },
@@ -112,18 +117,26 @@ const ENG_GATES = { key: 'gates', title: 'Gate Plan' };
 const ENG_RISKS = { key: 'risks', title: 'Risk Register (archive)' };
 const ENG_OKRS = { key: 'okrs', title: 'Objectives and Key Results' };
 const ENG_UPDATES = { key: 'updates', title: 'Risks and Issues' };
+const ENG_DISCOVERY = { key: 'discovery', title: 'Discovery Record' };
+/* v3.2 The discovery record's five tables. Any filled row brings the section
+   into the charter; an empty record leaves every existing document byte
+   for byte as it was. */
+export const DISCOVERY_FIELDS = ['clearance', 'ranking', 'findings', 'controls', 'returns'];
+export const hasDiscovery = (a) => !!a && DISCOVERY_FIELDS.some((k) => rowsFilled(a[k]).length > 0);
 export const engSections = (a) => {
   const hasAI = a && a.has_ai === 'Yes';
   const hasGates = a && rowsFilled(a.gates).length > 0;
   const hasRisks = a && rowsFilled(a.risks).length > 0;
   const hasOkrs = a && rowsFilled(a.okrs).length > 0;
   const hasUpdates = a && rowsFilled(a.updates).length > 0;
-  if (!hasAI && !hasGates && !hasRisks && !hasOkrs && !hasUpdates) return ENG_SECTIONS;
-  // Order: objective, metrics, then the gate plan (the schedule of decisions),
+  const hasDisc = hasDiscovery(a);
+  if (!hasAI && !hasGates && !hasRisks && !hasOkrs && !hasUpdates && !hasDisc) return ENG_SECTIONS;
+  // Order: objective, metrics, the discovery record (what the sessions and
+  // the floor established), then the gate plan (the schedule of decisions),
   // then AI acceptance (the numbers those decisions sign), then the risks and
   // issues authored against both, then everything else - contiguous in every
-  // shape, so charters without any of the three are byte-identical to before.
-  const mid = [...(hasOkrs ? [ENG_OKRS] : []), ...(hasGates ? [ENG_GATES] : []), ...(hasAI ? [ENG_AIEVAL] : []), ...(hasRisks ? [ENG_RISKS] : []), ...(hasUpdates ? [ENG_UPDATES] : [])];
+  // shape, so charters without any of them are byte-identical to before.
+  const mid = [...(hasOkrs ? [ENG_OKRS] : []), ...(hasDisc ? [ENG_DISCOVERY] : []), ...(hasGates ? [ENG_GATES] : []), ...(hasAI ? [ENG_AIEVAL] : []), ...(hasRisks ? [ENG_RISKS] : []), ...(hasUpdates ? [ENG_UPDATES] : [])];
   return [ENG_SECTIONS[0], ENG_SECTIONS[1], ...mid, ...ENG_SECTIONS.slice(2)]
     .map((s, i) => ({ ...s, num: i + 1 }));
 };
@@ -134,6 +147,7 @@ ENG_TITLE2KEY[ENG_GATES.title] = ENG_GATES.key;
 ENG_TITLE2KEY[ENG_RISKS.title] = ENG_RISKS.key;
 ENG_TITLE2KEY[ENG_OKRS.title] = ENG_OKRS.key;
 ENG_TITLE2KEY[ENG_UPDATES.title] = ENG_UPDATES.key;
+ENG_TITLE2KEY[ENG_DISCOVERY.title] = ENG_DISCOVERY.key;
 
 // The section number to display for a section key, given the document type. PRD
 // keeps its fixed numbering; an engagement renders contiguously from its layout.
@@ -180,18 +194,31 @@ export const Q = [
   { id: 'release', sec: 'solution', type: 'rows', prompt: 'Release plan', help: 'Each release and its objective.', add: 'Add release', cond: (a) => a.staged === 'Yes', cols: [{ k: 'rel', l: 'Release', ph: 'e.g. V1 Foundational' }, { k: 'obj', l: 'Objective', ph: 'What this release delivers' }, { k: 'mvp', l: 'MVP date', ph: 'to confirm' }, { k: 'ship', l: 'Release date', ph: 'to confirm' }] },
   { id: 'components', sec: 'solution', type: 'rows', prompt: 'Components and workstreams', help: 'Large sub-features and workstreams delivered inside this product, each with an owner and a status. A sub-feature stays in this one document. Tag its requirements to it in Sections 7 to 11. A component is a vertical slice that can span functional, non-functional, evaluation, and interface requirements.', add: 'Add component', cols: [{ k: 'name', l: 'Component', ph: 'e.g. E-Signature' }, { k: 'owner', l: 'Owner', ph: 'Who owns it' }, { k: 'status', l: 'Status', sel: ['Planned', 'Active', 'In Review', 'Shipped', 'Blocked'] }, { k: 'desc', l: 'Description', ph: 'One line' }] },
 
-  { id: 'metrics', sec: 'metrics', type: 'rows', prompt: 'Success metrics', help: 'Each metric with a target and a measurement method.', add: 'Add metric', cols: [{ k: 'metric', l: 'Metric', ph: 'e.g. Completion rate' }, { k: 'target', l: 'Target', ph: 'e.g. at least 75%' }, { k: 'method', l: 'Measurement method', ph: 'How it is measured' }] },
+  { id: 'metrics', sec: 'metrics', type: 'rows', prompt: 'Success metrics', help: 'Each metric with a target and a measurement method. A threshold the client signs also states its baseline measure, taken before the build on the operators\u2019 own cases. The comparison method separates market movement from system movement. Where the client can offer neither, say so and claim less.', add: 'Add metric', cols: [{ k: 'metric', l: 'Metric', ph: 'e.g. Completion rate' }, { k: 'target', l: 'Target', ph: 'e.g. at least 75%' }, { k: 'method', l: 'Measurement method', ph: 'How it is measured' }, { k: 'baseline', l: 'Baseline measure', ph: 'The figure before the build, and on whose cases' }, { k: 'comparison', l: 'Comparison method', ph: 'Holdout group, matched desk, or none' }] },
+
+  /* v3.2 The discovery record: the entries the discovery paper's cycle
+     produces, as authored rows that travel in the snapshot, print, diff and
+     sign like every other table. Claims themselves live in the discovery
+     entries (heard, decided, open, source) and promote into requirements;
+     what observation showed against them lands here as findings. Nothing
+     below is computed: a rank is typed, a status is chosen, a result is
+     recorded by the person who accepted it. */
+  { id: 'clearance', sec: 'discovery', type: 'rows', prompt: 'Clearance', help: 'Every approval of environment, data and access, with the name of the person who gave it. A refusal is recorded here too; it is the finding the executive now owns. Each row keeps a permanent id (CLR-###).', add: 'Add approval', cols: [{ k: 'item', l: 'Item', ph: 'e.g. Production quote data, masked' }, { k: 'scope', l: 'Scope', ph: 'What was approved, and what was not' }, { k: 'approver', l: 'Approved by', ph: 'Name and control function' }, { k: 'date', l: 'Date', ph: 'e.g. 2026-10' }, { k: 'status', l: 'Status', sel: ['Approved', 'Refused', 'Pending'] }] },
+  { id: 'ranking', sec: 'discovery', type: 'rows', prompt: 'Ranked problems', help: 'Each candidate problem, the commercial quantity it moves, the priced gap between the claimed process and the floor, and its rank. The accountable executive signs the baseline that carries this table. Each row keeps a permanent id (RANK-###).', add: 'Add problem', cols: [{ k: 'problem', l: 'Problem', ph: 'The problem as it operates on the floor' }, { k: 'mechanism', l: 'Mechanism', ph: 'e.g. hours from request to quote' }, { k: 'gap', l: 'Priced gap', ph: 'e.g. 11 hours per quote across 40 quotes a week' }, { k: 'rank', l: 'Rank', ph: '1' }, { k: 'status', l: 'Status', sel: ['Candidate', 'Taken forward', 'Deferred', 'Misnamed'] }] },
+  { id: 'findings', sec: 'discovery', type: 'rows', prompt: 'Findings', help: 'What observation showed against what was claimed: a failed claim with the contradicting source beside it, a data gap, a drift found on return, or an exit. The claim stays on the record; the finding sits next to it. Each row keeps a permanent id (FND-###).', add: 'Add finding', cols: [{ k: 'finding', l: 'Finding', ph: 'What was observed' }, { k: 'contradicts', l: 'Contradicts', ph: 'The claim it contradicts, e.g. a discovery entry or FR-004' }, { k: 'source', l: 'Source', ph: 'Who showed it, or which data' }, { k: 'owner', l: 'Owner', ph: 'Who owns it now' }, { k: 'kind', l: 'Kind', sel: ['Failed claim', 'Data gap', 'Drift', 'Exit'] }] },
+  { id: 'controls', sec: 'discovery', type: 'rows', prompt: 'Control function constraints', help: 'Limits the control functions place on any build: systems of record, data that may be read, identity and permission boundaries, regulatory rules. A constraint with a fit criterion is a test the suite carries, authored by its control function. General constraints stay in Assumptions, Dependencies, and Constraints. Each row keeps a permanent id (CON-###).', add: 'Add constraint', cols: [{ k: 'constraint', l: 'Constraint', ph: 'When X, the system shall ...' }, { k: 'owner', l: 'Control function', ph: 'e.g. Security, Jane Doe' }, { k: 'fit', l: 'Fit criterion', ph: 'Blank when it is not testable' }, { k: 'negotiable', l: 'Negotiable', sel: ['No', 'Yes'], def: 'No' }] },
+  { id: 'returns', sec: 'discovery', type: 'rows', prompt: 'Release reviews', help: 'Each build or model release run against the suite: the build reference, the baseline fingerprint the build read, the result, and the person who accepted it. An agent may propose a row through the Inbox; a person promotes it. Each row keeps a permanent id (REL-###).', add: 'Add release review', cols: [{ k: 'build', l: 'Build reference', ph: 'Commit, tag or release id' }, { k: 'fingerprint', l: 'Baseline fingerprint', ph: 'The sha256 the build pinned' }, { k: 'result', l: 'Suite result', sel: ['Pass', 'Fail', 'Partial'] }, { k: 'notes', l: 'Notes', ph: 'What failed, or what drifted' }, { k: 'accepted', l: 'Accepted by', ph: 'Name' }, { k: 'date', l: 'Date', ph: 'e.g. 2026-10' }] },
 
   { id: 'assume', sec: 'adc', type: 'list', prompt: 'Assumptions', help: 'Conditions assumed true. If one proves false, add it to Risks and Issues on the Delivery board.', add: 'Add assumption', ph: 'An assumption' },
   { id: 'depend', sec: 'adc', type: 'list', prompt: 'Dependencies', help: 'Other systems, vendors, data, or decisions outside the team.', add: 'Add dependency', ph: 'A dependency' },
   { id: 'constrain', sec: 'adc', type: 'list', prompt: 'Constraints', help: 'Fixed limits the solution must respect: platform, budget, schedule, standards, policy.', add: 'Add constraint', ph: 'A constraint' },
 
-  { id: 'fr', sec: 'functional', type: 'rows', prompt: 'Functional requirements', help: 'Each function as a single, testable requirement. Every requirement needs a fit criterion: the measurable condition that defines acceptance.', add: 'Add requirement', req: true, cols: [{ k: 'stmt', l: 'Requirement', ph: 'When the user does X, the system shall do Y.' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'The measurable acceptance condition. End with Test, Inspection, or Demonstration.' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
+  { id: 'fr', sec: 'functional', type: 'rows', prompt: 'Functional requirements', help: 'Each function as a single, testable requirement. Every requirement needs a fit criterion: the measurable condition that defines acceptance. A test input and an expected result turn the sentence into a case a Tester can run.', add: 'Add requirement', req: true, cols: [{ k: 'stmt', l: 'Requirement', ph: 'When the user does X, the system shall do Y.' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'The measurable acceptance condition. End with Test, Inspection, or Demonstration.' }, { k: 'input', l: 'Test input', ph: 'The case or data the test runs on' }, { k: 'expected', l: 'Expected result', ph: 'What a correct result is' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
 
   { id: 'nfr', sec: 'nonfunctional', type: 'rows', prompt: 'Non-functional requirements', help: 'Quality requirements. Replace fast and secure with numbers and conditions. Consider performance, security, reliability, availability, scalability, accessibility, compliance.', add: 'Add requirement', cols: [{ k: 'stmt', l: 'Requirement', ph: 'Quality requirement with a number' }, { k: 'fit', l: 'Fit criterion and acceptance', ph: 'Measured condition' }, { k: 'pri', l: 'Priority', sel: ['Must', 'Should', 'Could', "Won't"] }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
 
   { id: 'has_ai', sec: 'aieval', type: 'choice', prompt: 'Does the product include AI, probabilistic, or generative components?', options: ['Yes', 'No'], help: 'Such components cannot be verified by a single expected output. They need evaluation criteria against a golden dataset. This unlocks Section 9.', req: true },
-  { id: 'eval', sec: 'aieval', type: 'rows', prompt: 'AI evaluation criteria', help: 'For each quality dimension, state the metric, the method, a numeric threshold, and the named eval set it is measured on, with its sampling rule. A threshold without a named set can be cherry-picked; a threshold on a named set is a number the client can sign. Always include a grounding or hallucination guardrail and a safety threshold.', add: 'Add criterion', cond: (a) => a.has_ai === 'Yes', cols: [{ k: 'dim', l: 'Quality dimension', ph: 'e.g. Hallucination guardrail' }, { k: 'metric', l: 'Metric and method', ph: 'What is measured and how' }, { k: 'thresh', l: 'Threshold', ph: 'e.g. at least 95%' }, { k: 'dataset', l: 'Eval set', ph: 'e.g. acceptance-set v3 · 100 cases · fixed sample' }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
+  { id: 'eval', sec: 'aieval', type: 'rows', prompt: 'AI evaluation criteria', help: 'For each quality dimension, state the metric, the method, a numeric threshold, and the named eval set it is measured on, with its sampling rule. A threshold without a named set can be cherry-picked; a threshold on a named set is a number the client can sign. Always include a grounding or hallucination guardrail and a safety threshold.', add: 'Add criterion', cond: (a) => a.has_ai === 'Yes', cols: [{ k: 'dim', l: 'Quality dimension', ph: 'e.g. Hallucination guardrail' }, { k: 'metric', l: 'Metric and method', ph: 'What is measured and how' }, { k: 'thresh', l: 'Threshold', ph: 'e.g. at least 95%' }, { k: 'dataset', l: 'Eval set', ph: 'e.g. acceptance-set v3 · 100 cases · fixed sample' }, { k: 'grader', l: 'Grader', ph: 'Who or what scores a run, e.g. a named reviewer or a rubric' }, { k: 'pass_rate', l: 'Pass rate', ph: 'Required across repeated runs, e.g. 19 of 20' }, { k: 'exec', l: 'Executed by', sel: ['Human', 'Agent', 'Mixed'], def: 'Human' }, { k: 'comp', l: 'Component', dyn: 'components' }] },
   { id: 'golden', sec: 'aieval', type: 'long', prompt: 'Golden dataset and red-team approach', help: 'What the labeled benchmark set covers, and how you probe for hallucination and sycophancy.', cond: (a) => a.has_ai === 'Yes' },
   { id: 'gates', sec: 'gates', type: 'rows', prompt: 'Stage gates', help: 'Each gate: what must be true, who decides, by when. Name the gate on the baseline when you generate it, and the gate packet carries the evidence into the room.', add: 'Add gate', cond: (a) => isEngagement(a), cols: [{ k: 'gate', l: 'Gate', ph: 'e.g. Requirements Baseline' }, { k: 'criteria', l: 'Criteria', ph: 'What must be true to pass' }, { k: 'decider', l: 'Deciding role', ph: 'e.g. Sponsor' }, { k: 'target', l: 'Target date', ph: 'to confirm' }] },
   // Status is a fixed list rather than a free text box on purpose. Left open,
@@ -234,7 +261,7 @@ export const Q = [
   { id: 'link_demo', sec: 'people', type: 'short', prompt: 'Demo link', help: 'A working demo, if one exists. Leave blank until it does; the document carries the link only when set.', ph: 'https://' },
 
   { id: 'glossary', sec: 'glossary', type: 'rows', prompt: 'Glossary', help: 'Terms specific to this product and their definitions.', add: 'Add term', cols: [{ k: 'term', l: 'Term', ph: 'Term' }, { k: 'def', l: 'Definition', ph: 'Definition' }] },
-  { id: 'decisions', sec: 'decisions', type: 'rows', prompt: 'Key decisions', help: 'Each material decision on this engagement: the options weighed, why this one, who decided, and when. Each gets a permanent ID (DEC-###). This is the record you defend later.', add: 'Add decision', cols: [{ k: 'decision', l: 'Decision', ph: 'What was decided' }, { k: 'options', l: 'Options considered', ph: 'Alternatives weighed' }, { k: 'rationale', l: 'Rationale', ph: 'Why this one' }, { k: 'owner', l: 'Decided by', ph: 'Name or role' }, { k: 'date', l: 'Date', ph: 'e.g. 2026-07' }, { k: 'supersedes', l: 'Supersedes', ph: 'Prior decision or requirement, if any' }] }
+  { id: 'decisions', sec: 'decisions', type: 'rows', prompt: 'Key decisions', help: 'Each material decision on this engagement: the options weighed, why this one, who decided, and when. Each gets a permanent ID (DEC-###). Concerns names the row the decision is about; a Reconcile decision records where leadership and operators disagreed about what correct means, and who decided. This is the record you defend later.', add: 'Add decision', cols: [{ k: 'decision', l: 'Decision', ph: 'What was decided' }, { k: 'options', l: 'Options considered', ph: 'Alternatives weighed' }, { k: 'rationale', l: 'Rationale', ph: 'Why this one' }, { k: 'owner', l: 'Decided by', ph: 'Name or role' }, { k: 'date', l: 'Date', ph: 'e.g. 2026-07' }, { k: 'supersedes', l: 'Supersedes', ph: 'Prior decision or requirement, if any' }, { k: 'ref', l: 'Concerns', ph: 'The row it decides, e.g. FR-003 or RANK-001' }, { k: 'kind', l: 'Kind', sel: ['Reconcile', 'Scope', 'Method', 'Other'] }] }
 ];
 export const qById = Object.fromEntries(Q.map((q) => [q.id, q]));
 export const qBySec = (k) => Q.filter((q) => q.sec === k);
@@ -291,6 +318,10 @@ export const bullets = (arr) => (arr || []).filter((s) => s && String(s).trim())
 export const isMetaKey = (k) => !!k && k[0] === '_';
 export const rowsFilled = (arr) => (arr || []).filter((r) => Object.keys(r || {}).some((c) => !isMetaKey(c) && r[c] && String(r[c]).trim()));
 export const idOf = (prefix, row, i) => prefix + '-' + String(row._k != null ? row._k : i + 1).padStart(3, '0');
+/* Every row table that prints a permanent id, with its prefix. The worksheet
+   tags rows with it, the document prints it, the package and the knowledge
+   map address rows by it, and the diff names changes by it. */
+export const ROW_PREFIX = { fr: 'FR', nfr: 'NFR', eval: 'EVAL', interfaces: 'IR', decisions: 'DEC', clearance: 'CLR', ranking: 'RANK', findings: 'FND', controls: 'CON', returns: 'REL' };
 const naField = () => '[ to confirm ]';
 /* Executed-by defaults to Human everywhere it renders; the stored blank and
    the stored 'Human' are the same fact. */
@@ -435,13 +466,45 @@ function bSolution(a) {
   }
   return p.join('\n\n');
 }
-function bMetrics(a) {
+/* v3.2 A column that no row fills stays out of the printed table, so every
+   document baselined before the column existed prints as it always did. */
+const anyFilled = (rows, k) => rows.some((r) => r && String(r[k] || '').trim());
+export function metricsTable(a) {
   const m = rowsFilled(a.metrics);
-  if (!m.length) return null;
-  return '## 4. Success Metrics\n\n' + mdTable(['Metric', 'Target', 'Measurement Method'], m.map((r) => [r.metric || '', r.target || '', r.method || '']));
+  if (!m.length) return '';
+  const extra = anyFilled(m, 'baseline') || anyFilled(m, 'comparison');
+  return extra
+    ? mdTable(['Metric', 'Target', 'Measurement Method', 'Baseline Measure', 'Comparison Method'], m.map((r) => [r.metric || '', r.target || '', r.method || '', r.baseline || naField(), r.comparison || naField()]))
+    : mdTable(['Metric', 'Target', 'Measurement Method'], m.map((r) => [r.metric || '', r.target || '', r.method || '']));
 }
+function bMetrics(a) {
+  const t = metricsTable(a);
+  return t ? '## 4. Success Metrics\n\n' + t : null;
+}
+/* v3.2 The discovery record: five tables, each printed only when it has a
+   row, under one unnumbered heading in both document shapes. */
+export function discoveryBody(a) {
+  const P = [];
+  const cl = rowsFilled(a.clearance);
+  if (cl.length) P.push('### Clearance\n\n' + mdTable(['ID', 'Item', 'Scope', 'Approved by', 'Date', 'Status'],
+    cl.map((r, i) => [idOf('CLR', r, i), r.item || '', r.scope || '', r.approver || naField(), r.date || '', r.status || 'Pending'])));
+  const rk = rowsFilled(a.ranking);
+  if (rk.length) P.push('### Ranked Problems\n\n' + mdTable(['ID', 'Rank', 'Problem', 'Mechanism', 'Priced Gap', 'Status'],
+    rk.map((r, i) => [idOf('RANK', r, i), r.rank || '', r.problem || '', r.mechanism || naField(), r.gap || naField(), r.status || 'Candidate'])));
+  const fd = rowsFilled(a.findings);
+  if (fd.length) P.push('### Findings\n\n' + mdTable(['ID', 'Finding', 'Contradicts', 'Source', 'Owner', 'Kind'],
+    fd.map((r, i) => [idOf('FND', r, i), r.finding || '', r.contradicts || '', r.source || naField(), r.owner || naField(), r.kind || ''])));
+  const co = rowsFilled(a.controls);
+  if (co.length) P.push('### Control Function Constraints\n\n' + mdTable(['ID', 'Constraint', 'Control Function', 'Fit Criterion', 'Negotiable'],
+    co.map((r, i) => [idOf('CON', r, i), r.constraint || '', r.owner || naField(), r.fit || '', r.negotiable || 'No'])));
+  const rl = rowsFilled(a.returns);
+  if (rl.length) P.push('### Release Reviews\n\n' + mdTable(['ID', 'Build', 'Baseline Fingerprint', 'Result', 'Notes', 'Accepted by', 'Date'],
+    rl.map((r, i) => [idOf('REL', r, i), r.build || '', r.fingerprint || '', r.result || naField(), r.notes || '', r.accepted || naField(), r.date || ''])));
+  return P.length ? P.join('\n\n') : null;
+}
+function bDiscovery(a) { const b = discoveryBody(a); return b ? '## Discovery Record\n\n' + b : null; }
 const METHOD = '## 5. Requirements Method and Conventions\n\n' +
-  '**Identifiers.** FR for functional, NFR for non-functional, EVAL for an AI evaluation criterion, DR for data and privacy, IR for interface. Identifiers are permanent and are not reused.\n\n' +
+  '**Identifiers.** FR for functional, NFR for non-functional, EVAL for an AI evaluation criterion, IR for interface, DEC for a decision, and in the discovery record CLR for clearance, RANK for a ranked problem, FND for a finding, CON for a control function constraint, REL for a release review. These identifiers are permanent and are not reused. DR rows in Section 10 are numbered in print order.\n\n' +
   '**Fit criterion.** Every requirement carries a measurable fit criterion that defines acceptance. A requirement with no fit criterion is not finished.\n\n' +
   "**Priority.** MoSCoW: Must, Should, Could, or Won't for the stated release.\n\n" +
   '**Verification.** Deterministic requirements are verified by test, inspection, or demonstration. Probabilistic or AI components are verified by evaluation against a golden dataset with a stated threshold, because the same input can produce different outputs and correctness is a distribution rather than a single value. Safety requirements are verified on a red-team set with human review.\n\n' +
@@ -455,21 +518,36 @@ function bADC(a) {
   if (co) p.push('### 6.3 Constraints\n\n' + co);
   return p.join('\n\n');
 }
+/* v3.2 Test input and expected result print beside the fit criterion once
+   any row carries them; a requirement table without them is unchanged. */
+export function reqTable(prefix, rows) {
+  const cases = anyFilled(rows, 'input') || anyFilled(rows, 'expected');
+  return cases
+    ? mdTable(['ID', 'Requirement', 'Fit Criterion and Acceptance', 'Test Input', 'Expected Result', 'Priority', 'Executed by'], rows.map((r, i) => [idOf(prefix, r, i), r.stmt || '', r.fit || naField(), r.input || '', r.expected || '', r.pri || 'Must', execOf(r)]))
+    : mdTable(['ID', 'Requirement', 'Fit Criterion and Acceptance', 'Priority', 'Executed by'], rows.map((r, i) => [idOf(prefix, r, i), r.stmt || '', r.fit || naField(), r.pri || 'Must', execOf(r)]));
+}
 function bFunctional(a) {
   const fr = rowsFilled(a.fr);
   if (!fr.length) return null;
-  return '## 7. Functional Requirements\n\n' + mdTable(['ID', 'Requirement', 'Fit Criterion and Acceptance', 'Priority', 'Executed by'], fr.map((r, i) => [idOf('FR', r, i), r.stmt || '', r.fit || naField(), r.pri || 'Must', execOf(r)]));
+  return '## 7. Functional Requirements\n\n' + reqTable('FR', fr);
 }
 function bNonFunctional(a) {
   const nf = rowsFilled(a.nfr);
   if (!nf.length) return null;
-  return '## 8. Non-Functional Requirements\n\n' + mdTable(['ID', 'Requirement', 'Fit Criterion and Acceptance', 'Priority', 'Executed by'], nf.map((r, i) => [idOf('NFR', r, i), r.stmt || '', r.fit || naField(), r.pri || 'Must', execOf(r)]));
+  return '## 8. Non-Functional Requirements\n\n' + reqTable('NFR', nf);
+}
+/* v3.2 Grader and pass rate print once any criterion names them. */
+export function evalTable(ev) {
+  const graded = anyFilled(ev, 'grader') || anyFilled(ev, 'pass_rate');
+  return graded
+    ? mdTable(['ID', 'Quality Dimension', 'Metric and Method', 'Threshold', 'Eval Set', 'Grader', 'Pass Rate', 'Executed by'], ev.map((r, i) => [idOf('EVAL', r, i), r.dim || '', r.metric || '', r.thresh || naField(), r.dataset || naField(), r.grader || naField(), r.pass_rate || naField(), execOf(r)]))
+    : mdTable(['ID', 'Quality Dimension', 'Metric and Method', 'Threshold', 'Eval Set', 'Executed by'], ev.map((r, i) => [idOf('EVAL', r, i), r.dim || '', r.metric || '', r.thresh || naField(), r.dataset || naField(), execOf(r)]));
 }
 function bAIEval(a) {
   if (a.has_ai !== 'Yes') return null;
   const ev = rowsFilled(a.eval);
   const p = ['## 9. AI Evaluation Criteria'];
-  if (ev.length) p.push(mdTable(['ID', 'Quality Dimension', 'Metric and Method', 'Threshold', 'Eval Set', 'Executed by'], ev.map((r, i) => [idOf('EVAL', r, i), r.dim || '', r.metric || '', r.thresh || naField(), r.dataset || naField(), execOf(r)])));
+  if (ev.length) p.push(evalTable(ev));
   else p.push('_Evaluation criteria to confirm. Always include a grounding or hallucination guardrail and a safety threshold._');
   if (a.golden) p.push('**Golden dataset and red-team method.** ' + a.golden);
   return p.join('\n\n');
@@ -526,6 +604,12 @@ function decisionsBody(a) {
   // 'Decided by' is the consultant's claim; 'recorded by' is upsert_row's
   // server-stamped identity of whoever last wrote the row. A decision is a
   // claim plus an attested recorder - the document says which is which.
+  // v3.2 Concerns and Kind print once any decision carries them.
+  const scoped = anyFilled(rows, 'ref') || anyFilled(rows, 'kind');
+  if (scoped) return mdTable(
+    ['ID', 'Decision', 'Concerns', 'Kind', 'Options considered', 'Rationale', 'Decided by', 'Date', 'Supersedes'],
+    rows.map((r, i) => [idOf('DEC', r, i), r.decision || '', r.ref || '', r.kind || '', r.options || '', r.rationale || '',
+      (r.owner || '') + (r._by ? ' (recorded by ' + r._by + ')' : ''), r.date || '', r.supersedes || '']));
   return mdTable(
     ['ID', 'Decision', 'Options considered', 'Rationale', 'Decided by', 'Date', 'Supersedes'],
     rows.map((r, i) => [idOf('DEC', r, i), r.decision || '', r.options || '', r.rationale || '',
@@ -576,7 +660,7 @@ export function buildSections(a, label, versions) {
   s.method = METHOD; s.adc = bADC(a); s.functional = bFunctional(a); s.nonfunctional = bNonFunctional(a);
   s.aieval = bAIEval(a); s.data = bData(a); s.interfaces = bInterfaces(a); s.verification = bVerification(a);
   s.traceability = bTraceability(a); s.people = bPeople(a); s.glossary = bGlossary(a);
-  s.decisions = bDecisions(a); s.okrs = bOkrs(a); s.updates = bUpdates(a);
+  s.decisions = bDecisions(a); s.okrs = bOkrs(a); s.updates = bUpdates(a); s.discovery = bDiscovery(a);
   s.revision = bRevision(versions);
   return s;
 }
@@ -599,9 +683,8 @@ function engObjective(a, n) {
   return p.length > 1 ? p.join('\n\n') : null;
 }
 function engMetrics(a, n) {
-  const m = rowsFilled(a.metrics);
-  if (!m.length) return null;
-  return '## ' + n + '. Success Metrics\n\n' + mdTable(['Metric', 'Target', 'Measurement Method'], m.map((r) => [r.metric || '', r.target || '', r.method || '']));
+  const t = metricsTable(a);
+  return t ? '## ' + n + '. Success Metrics\n\n' + t : null;
 }
 function engScope(a, n) {
   const comps = rowsFilled(a.components);
@@ -645,7 +728,7 @@ function engEval(a, n) {
   if (a.has_ai !== 'Yes') return null;
   const ev = rowsFilled(a.eval);
   const p = ['## ' + n + '. AI Acceptance Criteria'];
-  if (ev.length) p.push(mdTable(['ID', 'Quality Dimension', 'Metric and Method', 'Threshold', 'Eval Set', 'Executed by'], ev.map((r, i) => [idOf('EVAL', r, i), r.dim || '', r.metric || '', r.thresh || naField(), r.dataset || naField(), execOf(r)])));
+  if (ev.length) p.push(evalTable(ev));
   else p.push('_Acceptance criteria to confirm. State the metric, the method, and the numeric threshold that closes the AI workstream. Always including a grounding or hallucination guardrail and a safety threshold._');
   if (a.golden) p.push('**Golden dataset and red-team method.** ' + a.golden);
   return p.join('\n\n');
@@ -664,6 +747,7 @@ export function assembleEngagement(sections, a) {
       case 'risks': b = engRisks(a, sec.num); break;
       case 'okrs': { const bb = okrsBody(a); b = bb ? '## ' + sec.num + '. Objectives and Key Results\n\n' + bb : null; break; }
       case 'updates': { const bb = updatesBody(a); b = bb ? '## ' + sec.num + '. Update Log\n\n' + bb : null; break; }
+      case 'discovery': { const bb = discoveryBody(a); b = bb ? '## ' + sec.num + '. Discovery Record\n\n' + bb : null; break; }
       case 'aieval': b = engEval(a, sec.num); break;
       case 'solution': b = engScope(a, sec.num); break;
       case 'adc': b = engADC(a, sec.num); break;
@@ -682,7 +766,7 @@ export function assemble(sections, a) {
   const p = [];
   if (sections.control) p.push(sections.control);
   p.push('## Part I: Product Definition');
-  ['overview', 'users', 'solution', 'metrics'].forEach((k) => { if (sections[k]) p.push(sections[k]); });
+  ['overview', 'users', 'solution', 'metrics', 'discovery'].forEach((k) => { if (sections[k]) p.push(sections[k]); });
   p.push('## Part II: Requirements');
   ['method', 'adc', 'functional', 'nonfunctional', 'aieval', 'data', 'interfaces', 'verification', 'traceability', 'people', 'glossary', 'decisions', 'okrs', 'updates', 'revision'].forEach((k) => { if (sections[k]) p.push(sections[k]); });
   if (a.has_ai === 'Yes') p.push(APX_A);
@@ -858,8 +942,11 @@ export function mdToHtml(md) {
 }
 
 /* ---- Requirement-level diff between two answer snapshots ---- */
-export function reqDiff(prev, cur) {
-  const groups = [['fr', 'FR'], ['nfr', 'NFR'], ['eval', 'EVAL'], ['interfaces', 'IR']];
+/* The requirement tables, which the change note counts as requirements, and
+   every id-bearing table, which CHANGES.md and the knowledge map walk. */
+export const REQ_GROUPS = [['fr', 'FR'], ['nfr', 'NFR'], ['eval', 'EVAL'], ['interfaces', 'IR']];
+export const ALL_GROUPS = [...REQ_GROUPS, ['decisions', 'DEC'], ['clearance', 'CLR'], ['ranking', 'RANK'], ['findings', 'FND'], ['controls', 'CON'], ['returns', 'REL']];
+export function reqDiff(prev, cur, groups = REQ_GROUPS) {
   const added = [], modified = [], removed = [];
   const has = (r) => Object.keys(r || {}).some((k) => !isMetaKey(k) && k !== 'comp' && k !== 'src' && r[k] && String(r[k]).trim());
   const sig = (r) => {
@@ -887,14 +974,19 @@ export function reqDiff(prev, cur) {
    function: for every modified requirement, the exact columns that changed,
    with their old and new text. `src` (promotion attribution) is bookkeeping,
    not content, and never reports as a change. */
-const DIFF_COLS = {
-  fr: [['stmt', 'statement'], ['fit', 'fit criterion'], ['pri', 'priority'], ['exec', 'executed by'], ['comp', 'component']],
-  nfr: [['stmt', 'statement'], ['fit', 'fit criterion'], ['pri', 'priority'], ['exec', 'executed by'], ['comp', 'component']],
-  eval: [['dim', 'quality dimension'], ['metric', 'metric and method'], ['thresh', 'threshold'], ['dataset', 'eval set'], ['exec', 'executed by'], ['comp', 'component']],
-  interfaces: [['iface', 'interface'], ['req', 'requirement'], ['fit', 'fit criterion'], ['comp', 'component']]
+export const DIFF_COLS = {
+  fr: [['stmt', 'statement'], ['fit', 'fit criterion'], ['input', 'test input'], ['expected', 'expected result'], ['pri', 'priority'], ['exec', 'executed by'], ['comp', 'component']],
+  nfr: [['stmt', 'statement'], ['fit', 'fit criterion'], ['input', 'test input'], ['expected', 'expected result'], ['pri', 'priority'], ['exec', 'executed by'], ['comp', 'component']],
+  eval: [['dim', 'quality dimension'], ['metric', 'metric and method'], ['thresh', 'threshold'], ['dataset', 'eval set'], ['grader', 'grader'], ['pass_rate', 'pass rate'], ['exec', 'executed by'], ['comp', 'component']],
+  interfaces: [['iface', 'interface'], ['req', 'requirement'], ['fit', 'fit criterion'], ['comp', 'component']],
+  decisions: [['decision', 'decision'], ['ref', 'concerns'], ['kind', 'kind'], ['options', 'options considered'], ['rationale', 'rationale'], ['owner', 'decided by'], ['date', 'date'], ['supersedes', 'supersedes']],
+  clearance: [['item', 'item'], ['scope', 'scope'], ['approver', 'approved by'], ['date', 'date'], ['status', 'status']],
+  ranking: [['problem', 'problem'], ['mechanism', 'mechanism'], ['gap', 'priced gap'], ['rank', 'rank'], ['status', 'status']],
+  findings: [['finding', 'finding'], ['contradicts', 'contradicts'], ['source', 'source'], ['owner', 'owner'], ['kind', 'kind']],
+  controls: [['constraint', 'constraint'], ['owner', 'control function'], ['fit', 'fit criterion'], ['negotiable', 'negotiable']],
+  returns: [['build', 'build reference'], ['fingerprint', 'baseline fingerprint'], ['result', 'suite result'], ['notes', 'notes'], ['accepted', 'accepted by'], ['date', 'date']]
 };
-export function reqDiffDetail(prev, cur) {
-  const groups = [['fr', 'FR'], ['nfr', 'NFR'], ['eval', 'EVAL'], ['interfaces', 'IR']];
+export function reqDiffDetail(prev, cur, groups = REQ_GROUPS) {
   const out = [];
   groups.forEach((g) => {
     const byK = {};

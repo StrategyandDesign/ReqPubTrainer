@@ -3,7 +3,7 @@
 // and core.js. Do not edit by hand: regenerate, the drift gate compares.
 
 // ---- inlined app/js/core.js (byte-verified against the app) ----
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
 /* ReqPub v2 - core utilities: escaping, formatting, icons, theme, toast. */
 
 const esc = (s) => String(s == null ? '' : s)

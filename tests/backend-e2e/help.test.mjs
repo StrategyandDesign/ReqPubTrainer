@@ -35,6 +35,7 @@ try {
   await run(sql(rel('../../supabase/migrations/0008_help.sql')));
   await run(sql(rel('../../supabase/migrations/0008_help.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   check('migrations/0008_help.sql applies twice on top of schema.sql', true);
 
   await run(`insert into auth.users(id,email) values ('${MGR}','mgr@cv.co'),('${MEM}','mem@cv.co'),('${RIVAL}','rival@other.co')`);

@@ -118,6 +118,24 @@ export function healthSignals(a, ctx = {}) {
       'Requirement' + (notEars.length === 1 ? '' : 's') + ' not in EARS form',
       'Write each as When <trigger>, the system shall <response>; or While, Where, If then, or The system shall.');
 
+    // v3.2 The mechanical review tier, three more warnings. A non negotiable
+    // control function constraint with no fit criterion is a rule nobody can
+    // test; a problem taken forward with no mechanism or priced gap cannot be
+    // ranked by the growth rule; a control function constraint outside the
+    // EARS shapes cannot become a test any more than a requirement can.
+    const conNoFit = filled(a.controls).filter((r) => (r.negotiable || 'No') === 'No' && blank(r.fit));
+    add('con_no_fit', 'warn', conNoFit.length,
+      'Non negotiable constraint' + (conNoFit.length === 1 ? '' : 's') + ' with no fit criterion',
+      'A constraint the control function will not negotiate enters the suite as a test. State how it is checked.');
+    const rankThin = filled(a.ranking).filter((r) => r.status === 'Taken forward' && (blank(r.mechanism) || blank(r.gap)));
+    add('rank_no_mechanism', 'warn', rankThin.length,
+      'Problem' + (rankThin.length === 1 ? '' : 's') + ' taken forward without a mechanism or a priced gap',
+      'Name the commercial quantity the problem moves and the gap between the claimed process and the floor before the executive signs.');
+    const conNotEars = filled(a.controls).filter((r) => !blank(r.constraint) && !blank(r.fit) && !earsShape(r.constraint));
+    add('con_not_ears', 'warn', conNotEars.length,
+      'Testable constraint' + (conNotEars.length === 1 ? '' : 's') + ' not in EARS form',
+      'A constraint with a fit criterion is a test; write it as When <trigger>, the system shall <response>.');
+
     // AI declared, but Section 9 is empty: probabilistic components cannot be
     // verified by a single expected output; they need evaluation criteria.
     if (a.has_ai === 'Yes') {

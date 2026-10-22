@@ -51,6 +51,7 @@ try {
     (await one(`select name from projects where id='drifted'`)).name === 'Fresh Name');
   await run(sql(rel('../../supabase/migrations/0014_project_name_sync.sql')));
   await run(sql(rel('../../supabase/migrations/0030_record_conformance.sql')));   // v3.1: the shipped state sits on top of the replayed stack
+  await run(sql(rel('../../supabase/migrations/0031_handoff_and_export.sql')));   // v3.2: likewise
   check('the fix file is idempotent (second run leaves one trigger, same name)',
     +(await one(`select count(*) c from pg_trigger where tgname='pf_sync_name'`)).c === 1 &&
     (await one(`select name from projects where id='drifted'`)).name === 'Fresh Name');
