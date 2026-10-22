@@ -39,7 +39,6 @@ None. Every change is complete.
 `index.html`, `docs/STATUS.md`, and `tests/COUNTS.json` all read 3.2.0, and
 `CHANGELOG.md` carries the `## 3.2.0` entry that the capabilities gate resolves
 `sinceVersion` against. The claims gate fails the build if any of them drifts.
-Production matches once the deploy in `docs/releases/v3.2.md` is done:
-migration 0031 applied, the site served from `main`, and all eight edge
-functions redeployed from the repository with the JWT setting each header
-states.
+Production matches: migration 0031 applied, the site served from `main`,
+and all eight edge functions redeployed from the repository with the JWT
+setting each header states.

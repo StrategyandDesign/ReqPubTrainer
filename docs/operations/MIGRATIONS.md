@@ -52,4 +52,4 @@ every migration is idempotent, so re-applying one is safe.
 | 0028 | `0028_authz_lockdown.sql` | C1 HARDENING - AUTHORIZATION LOCKDOWN. Run once in the Supabase SQL | yes, 2026-08-05 |
 | 0029 | `0029_ssrf_guard.sql` | C1 HARDENING - EGRESS GUARD. Run once in the Supabase SQL editor, | yes, 2026-08-05 |
 | 0030 | `0030_record_conformance.sql` | RECORD CONFORMANCE (3.1.0): row provenance columns, server-side source copy, | yes, 2026-10-21 |
-| 0031 | `0031_handoff_and_export.sql` | THE ENGINEERING SEAM (3.2.0): signed handoff on the MCP baseline read, the | not yet |
+| 0031 | `0031_handoff_and_export.sql` | THE ENGINEERING SEAM (3.2.0): signed handoff on the MCP baseline read, the | yes, 2026-10-22 |
