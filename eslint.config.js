@@ -22,7 +22,7 @@ export default [
         localStorage: 'readonly', sessionStorage: 'readonly', alert: 'readonly',
         Blob: 'readonly', File: 'readonly', FileReader: 'readonly', URL: 'readonly',
         TextEncoder: 'readonly', TextDecoder: 'readonly', Response: 'readonly',
-        Request: 'readonly', Headers: 'readonly', AbortController: 'readonly',
+        Request: 'readonly', Headers: 'readonly', AbortController: 'readonly', AbortSignal: 'readonly',
         atob: 'readonly', btoa: 'readonly', structuredClone: 'readonly',
         requestAnimationFrame: 'readonly', getComputedStyle: 'readonly',
         MutationObserver: 'readonly', IntersectionObserver: 'readonly', Image: 'readonly',
